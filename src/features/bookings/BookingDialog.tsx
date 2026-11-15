@@ -57,7 +57,7 @@ export default function BookingDialog({ id, defaults, onClose }: { id?: string; 
   const expenses = useTripTable(trip.id, 'expenses')
   const existing = id ? bookings.data?.find((b) => b.id === id) : undefined
   const fromActivity = defaults?.fromActivity ? activities.data?.find((a) => a.id === defaults.fromActivity) : undefined
-  const initialPlaceId = existing?.place_id ?? fromActivity?.place_id
+  const initialPlaceId = existing?.place_id ?? fromActivity?.place_id ?? (defaults?.place_id as string | undefined)
   const initialPlace = initialPlaceId ? places.data?.find((p) => p.id === initialPlaceId) : undefined
   const [place, setPlace] = useState<PlaceChoice>(initialPlace ? { kind: 'existing', place: initialPlace } : null)
   const [attendeeIds, setAttendeeIds] = useState<string[]>(
@@ -72,14 +72,14 @@ export default function BookingDialog({ id, defaults, onClose }: { id?: string; 
     defaultValues: {
       title: existing?.title ?? fromActivity?.title ?? (defaults?.title as string) ?? '',
       type: existing?.type ?? (fromActivity ? 'ticket' : (defaults?.type as string) ?? 'lodging'),
-      status: existing?.status ?? (fromActivity ? 'booked' : 'booked'),
+      status: existing?.status ?? (defaults?.status as string) ?? 'booked',
       start_at: toLocalInput(existing?.start_at) || (fromActivity?.day_date ? `${fromActivity.day_date}T${fromActivity.start_time?.slice(0, 5) ?? '09:00'}` : ''),
       end_at: toLocalInput(existing?.end_at),
       confirmation_code: existing?.confirmation_code ?? '',
-      price: existing?.price?.toString() ?? fromActivity?.est_cost?.toString() ?? '',
-      currency: existing?.currency ?? fromActivity?.currency ?? trip.currency,
-      url: existing?.url ?? '',
-      notes: existing?.notes ?? '',
+      price: existing?.price?.toString() ?? fromActivity?.est_cost?.toString() ?? (defaults?.price != null ? String(defaults.price) : ''),
+      currency: existing?.currency ?? fromActivity?.currency ?? (defaults?.currency as string) ?? trip.currency,
+      url: existing?.url ?? (defaults?.url as string) ?? '',
+      notes: existing?.notes ?? (defaults?.notes as string) ?? '',
       booking_deadline: existing?.booking_deadline ?? '',
     },
   })
@@ -122,6 +122,7 @@ export default function BookingDialog({ id, defaults, onClose }: { id?: string; 
       if (add.length) await writer.insertMany('booking_attendees', add)
 
       if (fromActivity) await writer.update('activities', fromActivity.id, { linked_booking_id: bookingId!, booking_status: 'booked', needs_booking: true })
+      if (!existing && defaults?.fromOption) await writer.update('options', defaults.fromOption as string, { booking_id: bookingId!, chosen: true })
 
       // dépense liée automatique
       if (createExpense && !hasExpense && priceNum && v.status !== 'to_book' && v.status !== 'cancelled' && payer) {

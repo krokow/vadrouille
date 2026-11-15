@@ -81,15 +81,15 @@ export default function ActivityDialog({ id, defaults, onClose }: Props) {
   const [attendeeIds, setAttendeeIds] = useState<string[]>(
     id ? (attendees.data ?? []).filter((a) => a.activity_id === id).map((a) => a.member_id) : members.map((m) => m.id),
   )
-  const [showAttention, setShowAttention] = useState(!!existing && Object.values(existing.attention_notes ?? {}).some(Boolean))
+  const [showAttention, setShowAttention] = useState(existing ? Object.values(existing.attention_notes ?? {}).some(Boolean) : !!defaults?.attention_notes)
   const [showMore, setShowMore] = useState(!!existing && !!(existing.notes || existing.est_cost || existingLinks.length))
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
       title: existing?.title ?? (defaults?.title as string) ?? '',
-      description: existing?.description ?? '',
-      category: existing?.category ?? 'visit',
+      description: existing?.description ?? (defaults?.description as string) ?? '',
+      category: existing?.category ?? (defaults?.category as string) ?? 'visit',
       day_date: existing?.day_date ?? (defaults?.day_date as string) ?? '',
       start_time: existing?.start_time?.slice(0, 5) ?? '',
       end_time: existing?.end_time?.slice(0, 5) ?? '',
@@ -100,8 +100,8 @@ export default function ActivityDialog({ id, defaults, onClose }: Props) {
       booking_status: existing?.booking_status ?? 'to_book',
       booking_deadline: existing?.booking_deadline ?? '',
       linked_booking_id: existing?.linked_booking_id ?? '',
-      links: existingLinks.map((l) => ({ id: l.id, label: l.label ?? '', url: l.url })),
-      attention: { ...(existing?.attention_notes ?? {}) } as Record<string, string>,
+      links: existing ? existingLinks.map((l) => ({ id: l.id, label: l.label ?? '', url: l.url })) : ((defaults?.links as { label: string; url: string }[]) ?? []),
+      attention: { ...(existing?.attention_notes ?? (defaults?.attention_notes as Record<string, string>) ?? {}) } as Record<string, string>,
       notes: existing?.notes ?? '',
     },
   })

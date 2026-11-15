@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import L from 'leaflet'
 import { MapContainer, Marker, Polyline, Popup, TileLayer, Circle, useMap, useMapEvents } from 'react-leaflet'
 import { useQuery } from '@tanstack/react-query'
-import { Bike, Car, ChevronDown, ChevronLeft, ChevronRight, Crosshair, Footprints, Layers, Loader2, LocateFixed, Maximize, Plus, Route, Settings2, X } from 'lucide-react'
+import { Sparkles, ExternalLink, Bike, Car, ChevronDown, ChevronLeft, ChevronRight, Crosshair, Footprints, Layers, Loader2, LocateFixed, Maximize, Plus, Route, Settings2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTrip } from '@/features/trips/TripContext'
 import { useQuickAdd } from '@/features/trips/QuickAdd'
@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils'
 import { buildPoints, POINT_KINDS, type MapPoint, type PointKind } from './mapPoints'
 import { DAY_COLORS, resolveTile, TILE_STYLES, type TileKey } from './tiles'
+import { SUGGEST_CATEGORIES, suggestAround, type SuggestCategory, type Suggestion } from '@/lib/overpass'
 
 type Mode = 'straight' | RouteMode
 const MODES: { key: Mode; label: string; icon: typeof Footprints }[] = [
@@ -183,6 +184,9 @@ export default function MapPage() {
   const [fly, setFly] = useState<{ lat: number; lng: number; zoom?: number } | null>(null)
   const [me, setMe] = useState<{ lat: number; lng: number; acc: number } | null>(null)
   const [fitSignal, setFitSignal] = useState(0)
+  const [suggestOpen, setSuggestOpen] = useState(false)
+  const [suggestCat, setSuggestCat] = useState<SuggestCategory>('top')
+  const [suggestCenter, setSuggestCenter] = useState<{ lat: number; lng: number } | null>(null)
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(trip.lat != null && trip.lng != null ? { lat: trip.lat, lng: trip.lng } : null)
   const focusId = params.get('focus')
   const tile = resolveTile(tileKey, theme === 'dark')
@@ -258,6 +262,33 @@ export default function MapPage() {
   const stepNumber = useMemo(() => new Map(stops.filter((s) => s.kind === 'step').map((s) => [s.point.key, s.label])), [stops])
   const dayColorOf = (p: MapPoint) => (day === 'all' && allRoutes && p.day && p.key.startsWith('a-') && dayIndex(p.day) >= 0 ? DAY_COLORS[dayIndex(p.day) % DAY_COLORS.length] : null)
   const routeColor = singleDay ? DAY_COLORS[Math.max(0, dayIndex(day)) % DAY_COLORS.length] : '#ef7b62'
+
+  const suggestQ = useQuery({
+    queryKey: ['suggest', suggestCat, suggestCenter?.lat.toFixed(3), suggestCenter?.lng.toFixed(3)],
+    queryFn: () => suggestAround(suggestCat, suggestCenter!),
+    enabled: suggestOpen && !!suggestCenter,
+    staleTime: Infinity,
+    retry: false,
+    meta: { persist: false },
+  })
+  const existingNames = useMemo(() => new Set(all.map((p) => p.place.name.toLowerCase())), [all])
+  const openSuggestions = () => {
+    setSuggestOpen(true)
+    setSuggestCenter(center ?? (fallback ? { lat: fallback[0], lng: fallback[1] } : null))
+  }
+  const addSuggestion = (sg: Suggestion) => {
+    const meta = SUGGEST_CATEGORIES[suggestCat]
+    quick({
+      kind: 'activity',
+      defaults: {
+        title: sg.name, category: meta.activity, day_date: singleDay ? day : '',
+        place: { id: sg.id, name: sg.name, label: sg.address ?? '', lat: sg.lat, lng: sg.lng, osm_id: sg.id, kind: sg.kind },
+        description: sg.cuisine ? `Cuisine : ${sg.cuisine}` : '',
+        attention_notes: sg.opening_hours ? { opening_hours: sg.opening_hours } : undefined,
+        links: sg.website ? [{ label: 'Site officiel', url: sg.website }] : [],
+      },
+    })
+  }
 
   const focused = focusId ? all.find((p) => p.place.id === focusId) : undefined
   const fallback: [number, number] | null = trip.lat != null && trip.lng != null ? [trip.lat, trip.lng] : null
@@ -362,6 +393,13 @@ export default function MapPage() {
               const icon = num ? pinIcon(color, num, { big: p.place.id === focusId }) : pinIcon(color, p.emoji, { big: p.place.id === focusId, square: p.kind === 'lodging' })
               return <PointMarker key={p.key} point={p} icon={icon} openOnAdd={p.place.id === focusId} />
             })}
+            {suggestOpen && (suggestQ.data ?? []).map((sg) => (
+              <Marker key={sg.id} position={[sg.lat, sg.lng]} icon={suggestIcon(SUGGEST_CATEGORIES[suggestCat].emoji, sg.famous)}>
+                <Popup>
+                  <SuggestionPopup sg={sg} canEdit={canEdit} already={existingNames.has(sg.name.toLowerCase())} onAdd={() => addSuggestion(sg)} />
+                </Popup>
+              </Marker>
+            ))}
             {candidate && (
               <Marker position={[candidate.lat, candidate.lng]} icon={pinIcon('#111827', '+', { big: true })}>
                 <Popup autoClose={false} closeOnClick={false}>
@@ -399,6 +437,10 @@ export default function MapPage() {
               </PopoverTrigger>
               <PopoverContent align="end" side="left" className="w-64 p-3"><TileChooser value={tileKey} onChange={setTileKey} /></PopoverContent>
             </Popover>
+            <button onClick={() => (suggestOpen ? setSuggestOpen(false) : openSuggestions())} aria-pressed={suggestOpen}
+              className={cn('flex h-10 w-10 items-center justify-center rounded-full border shadow-md', suggestOpen ? 'border-primary bg-primary text-primary-foreground' : 'bg-background')} aria-label="Suggestions autour">
+              <Sparkles className="h-5 w-5" />
+            </button>
             <button onClick={locate} className="flex h-10 w-10 items-center justify-center rounded-full border bg-background shadow-md" aria-label="Me localiser"><LocateFixed className="h-5 w-5" /></button>
             <button onClick={() => { setFly(null); setCandidate(null); setFitSignal((n) => n + 1) }} className="flex h-10 w-10 items-center justify-center rounded-full border bg-background shadow-md" aria-label="Tout afficher"><Maximize className="h-5 w-5" /></button>
           </div>
@@ -431,10 +473,94 @@ export default function MapPage() {
               <Crosshair className="h-3.5 w-3.5" /> {focused.title} <X className="h-3.5 w-3.5" />
             </button>
           )}
-          {!desktop && panel}
+          {suggestOpen && (
+            <SuggestPanel
+              cat={suggestCat} setCat={(c) => { setSuggestCat(c); setSuggestCenter(center) }} loading={suggestQ.isFetching} error={suggestQ.error as Error | null}
+              items={suggestQ.data ?? []} moved={!!center && !!suggestCenter && haversineKm(center, suggestCenter) > 0.8}
+              onSearchHere={() => setSuggestCenter(center)} onClose={() => setSuggestOpen(false)} canEdit={canEdit}
+              existing={existingNames} onAdd={addSuggestion} onFocus={(sg) => setFly({ lat: sg.lat, lng: sg.lng, zoom: 17 })}
+            />
+          )}
+          {!desktop && !suggestOpen && panel}
         </div>
         {desktop && panel}
       </div>
+    </div>
+  )
+}
+
+function suggestIcon(emoji: string, famous: boolean) {
+  return pinIcon(famous ? '#f59e0b' : '#64748b', emoji, { square: true })
+}
+
+function SuggestionPopup({ sg, canEdit, already, onAdd }: { sg: Suggestion; canEdit: boolean; already: boolean; onAdd: () => void }) {
+  return (
+    <div className="min-w-[210px] space-y-2 font-sans">
+      <div>
+        <p className="text-sm font-bold">{sg.famous && '⭐ '}{sg.name}</p>
+        <p className="text-xs opacity-70">{[sg.cuisine, fmtKm(sg.km)].filter(Boolean).join(' · ')}</p>
+        {sg.opening_hours && <p className="text-xs opacity-70">🕘 {sg.opening_hours}</p>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {canEdit && <Button size="sm" onClick={onAdd} disabled={already}><Plus /> {already ? 'Déjà ajouté' : 'Ajouter'}</Button>}
+        {sg.website && <Button size="sm" variant="outline" asChild><a href={sg.website} target="_blank" rel="noreferrer"><ExternalLink /> Site</a></Button>}
+      </div>
+      <MapLinks lat={sg.lat} lng={sg.lng} name={sg.name} />
+    </div>
+  )
+}
+
+function SuggestPanel(props: {
+  cat: SuggestCategory; setCat: (c: SuggestCategory) => void; loading: boolean; error: Error | null; items: Suggestion[]; moved: boolean
+  onSearchHere: () => void; onClose: () => void; canEdit: boolean; existing: Set<string>; onAdd: (s: Suggestion) => void; onFocus: (s: Suggestion) => void
+}) {
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-[500] flex max-h-[55%] flex-col rounded-t-3xl border-t bg-background shadow-2xl sm:inset-x-auto sm:bottom-3 sm:left-3 sm:top-3 sm:max-h-none sm:w-80 sm:rounded-3xl sm:border">
+      <div className="flex items-center gap-2 p-3 pb-2">
+        <Sparkles className="h-4 w-4 text-warning" />
+        <p className="flex-1 text-sm font-bold">Suggestions autour</p>
+        <Button variant="ghost" size="icon-sm" aria-label="Fermer les suggestions" onClick={props.onClose}><X /></Button>
+      </div>
+      <ScrollRow className="px-3">
+        {(Object.entries(SUGGEST_CATEGORIES) as [SuggestCategory, (typeof SUGGEST_CATEGORIES)[SuggestCategory]][]).map(([k, c]) => (
+          <button key={k} onClick={() => props.setCat(k)} aria-pressed={props.cat === k}
+            className={cn('shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold', props.cat === k ? 'border-primary bg-primary text-primary-foreground' : 'bg-card')}>
+            {c.emoji} {c.label}
+          </button>
+        ))}
+      </ScrollRow>
+      {props.moved && (
+        <button onClick={props.onSearchHere} className="mx-3 mt-2 rounded-full bg-primary/10 py-1.5 text-xs font-bold text-primary">🔄 Rechercher dans cette zone</button>
+      )}
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        {props.loading ? (
+          <p className="flex items-center justify-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Recherche…</p>
+        ) : props.error ? (
+          <p className="p-4 text-center text-sm text-destructive">{props.error.message}</p>
+        ) : !props.items.length ? (
+          <p className="p-4 text-center text-sm text-muted-foreground">Rien trouvé à moins de 1,5 km. Déplace la carte puis relance la recherche.</p>
+        ) : (
+          <ul className="space-y-1">
+            {props.items.map((sg) => {
+              const already = props.existing.has(sg.name.toLowerCase())
+              return (
+                <li key={sg.id} className="flex items-center gap-2 rounded-xl p-2 hover:bg-accent/50">
+                  <button className="min-w-0 flex-1 text-left" onClick={() => props.onFocus(sg)}>
+                    <span className="block truncate text-sm font-semibold">{sg.famous && <span title="Lieu très connu">⭐ </span>}{sg.name}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{[sg.cuisine, fmtKm(sg.km)].filter(Boolean).join(' · ')}</span>
+                  </button>
+                  {props.canEdit && (
+                    <Button size="icon-sm" variant={already ? 'ghost' : 'outline'} disabled={already} aria-label={already ? 'Déjà dans le voyage' : `Ajouter ${sg.name}`} onClick={() => props.onAdd(sg)}>
+                      {already ? '✓' : <Plus />}
+                    </Button>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
+      <p className="px-3 pb-2 text-[10px] text-muted-foreground">Données © OpenStreetMap (Overpass) · ⭐ = lieu très connu</p>
     </div>
   )
 }

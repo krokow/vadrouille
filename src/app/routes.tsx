@@ -27,6 +27,7 @@ const HistoryPage = lazy(() => import('@/features/trips/HistoryPage'))
 const ChecklistPage = lazy(() => import('@/features/trips/ChecklistPage'))
 const JournalPage = lazy(() => import('@/features/trips/JournalPage'))
 const TodayPage = lazy(() => import('@/features/trips/TodayPage'))
+const ComparePage = lazy(() => import('@/features/trips/ComparePage'))
 const DocumentsPage = lazy(() => import('@/features/trips/DocumentsPage'))
 const PrintPage = lazy(() => import('@/features/trips/PrintPage'))
 
@@ -73,6 +74,7 @@ export function AppRoutes() {
           <Route path="checklist" element={page(<ChecklistPage />)} />
           <Route path="journal" element={page(<JournalPage />)} />
           <Route path="today" element={page(<TodayPage />)} />
+          <Route path="compare" element={page(<ComparePage />)} />
           <Route path="documents" element={page(<DocumentsPage />)} />
           <Route path="print" element={page(<PrintPage />)} />
         </Route>
