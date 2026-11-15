@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Camera, Loader2, Monitor, Moon, Sun, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bell, BellOff, BellRing, Camera, Loader2, Monitor, Moon, Sun, Trash2 } from 'lucide-react'
+import { notifyEnabled, notifySupported, showSystemNotification } from '@/lib/notify'
+import { disableNotifications, enableNotifications, pushAvailable } from '@/lib/push'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from './AuthProvider'
@@ -135,7 +137,59 @@ export function ProfilePage() {
           </div>
           {isDemo && <p className="text-xs text-muted-foreground">Mode démo : profil stocké dans ce navigateur.</p>}
         </Card>
+        <NotificationsCard />
       </div>
     </div>
+  )
+}
+
+function NotificationsCard() {
+  const { user } = useAuth()
+  const [state, setState] = useState(() => (notifySupported() ? Notification.permission : 'unsupported') as NotificationPermission | 'unsupported')
+  const [on, setOn] = useState(notifyEnabled())
+  const [busy, setBusy] = useState(false)
+  const ios = /iphone|ipad/i.test(navigator.userAgent) && !(window.matchMedia('(display-mode: standalone)').matches)
+
+  const enable = async () => {
+    if (!user) return
+    setBusy(true)
+    try {
+      const r = await enableNotifications(user.id)
+      if (r === 'denied') toast.error('Notifications refusées : autorise-les dans les réglages du navigateur')
+      if (r === 'granted') toast.success(pushAvailable() ? 'Notifications push activées sur cet appareil 🔔' : 'Notifications activées 🔔')
+      setState(notifySupported() ? Notification.permission : 'unsupported')
+      setOn(notifyEnabled())
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Activation impossible')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const disable = async () => {
+    await disableNotifications()
+    setOn(false)
+    toast.success('Notifications désactivées sur cet appareil')
+  }
+
+  return (
+    <Card className="mt-4 space-y-3 p-5">
+      <h2 className="flex items-center gap-2 font-semibold"><Bell className="h-4 w-4" /> Notifications</h2>
+      <p className="text-sm text-muted-foreground">
+        Modifications des autres participants, @mentions et échéances de réservation.
+        {pushAvailable() ? ' Elles arrivent même quand l’app est fermée.' : ' Elles s’affichent quand l’app est ouverte ou en arrière-plan.'}
+      </p>
+      {ios && <p className="rounded-xl bg-accent p-3 text-xs text-accent-foreground">Sur iPhone : installe d’abord l’app (Partager → « Sur l’écran d’accueil »), puis active les notifications depuis l’app installée.</p>}
+      {state === 'unsupported' ? (
+        <p className="text-sm text-muted-foreground">Ce navigateur ne gère pas les notifications.</p>
+      ) : on ? (
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => showSystemNotification('Vadrouille', 'Les notifications fonctionnent 🎉', { tag: 'test' })}><BellRing /> Tester</Button>
+          <Button variant="ghost" onClick={disable}><BellOff /> Désactiver</Button>
+        </div>
+      ) : (
+        <Button onClick={enable} disabled={busy || state === 'denied'}>{busy ? <Loader2 className="animate-spin" /> : <Bell />} Activer les notifications</Button>
+      )}
+      {state === 'denied' && <p className="text-xs text-destructive">Bloquées par le navigateur : autorise-les dans les réglages du site.</p>}
+    </Card>
   )
 }

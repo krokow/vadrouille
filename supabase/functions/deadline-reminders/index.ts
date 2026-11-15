@@ -5,6 +5,7 @@
 //   supabase secrets set RESEND_API_KEY=... CRON_SECRET=... APP_URL=https://<user>.github.io/vadrouille/ MAIL_FROM="Vadrouille <rappels@ton-domaine.fr>"
 // SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont fournis automatiquement aux Edge Functions.
 import { createClient } from 'npm:@supabase/supabase-js@2.46.1'
+import webpush from 'npm:web-push@3.6.7'
 
 const DAYS_BEFORE = [3, 1, 0] // J-3, veille, jour J
 
@@ -47,8 +48,21 @@ Deno.serve(async (req) => {
   for (const m of members ?? []) for (const it of items.filter((i) => i.trip_id === m.trip_id)) perUser.set(m.user_id!, [...(perUser.get(m.user_id!) ?? []), it])
 
   const appUrl = Deno.env.get('APP_URL') ?? ''
+  const pushReady = !!Deno.env.get('VAPID_PRIVATE_KEY')
+  if (pushReady) webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')!, Deno.env.get('VAPID_PUBLIC_KEY')!, Deno.env.get('VAPID_PRIVATE_KEY')!)
   let sent = 0
   for (const [userId, list] of perUser) {
+    // notification push (si les clés VAPID sont configurées)
+    if (pushReady) {
+      const { data: subs } = await sb.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', userId)
+      const body = list.map((it) => it.title).slice(0, 3).join(' · ')
+      for (const s of subs ?? []) {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          JSON.stringify({ title: `⏰ ${list.length} réservation${list.length > 1 ? 's' : ''} à faire bientôt`, body, url: `#/t/${list[0].trip_id}/todo`, tag: 'deadlines' }))
+          .catch(async (e: { statusCode?: number }) => { if (e.statusCode === 404 || e.statusCode === 410) await sb.from('push_subscriptions').delete().eq('id', s.id) })
+      }
+    }
+    if (!Deno.env.get('RESEND_API_KEY')) continue
     const { data } = await sb.auth.admin.getUserById(userId)
     const email = data.user?.email
     if (!email) continue

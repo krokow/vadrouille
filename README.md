@@ -43,6 +43,10 @@
 | **Budget** | Prévisionnel global et par catégorie avec jauges. Dépenses multi-devises (taux BCE figé à la date, via frankfurter.app, modifiable), répartition **parts égales / par parts / montants**, reçu en photo. **Soldes + simplification des dettes** (nombre minimal de virements), « marquer comme remboursé ». Graphiques par catégorie / par jour / par personne. **Export CSV** (format Excel FR). |
 | **Collaboration** | Temps réel Supabase sur toutes les tables, « modifié par X il y a 2 min », dernier écrit gagne (`updated_at`, `updated_by` posés par trigger), **historique** « qui a fait quoi » (regroupe les modifications successives). |
 | **Préparatifs** | Todo-list d'avant départ (échéances positionnées à J-30, J-7, J-1… via des modèles, responsable, alerte d'urgence, remontée sur le tableau de bord) à côté de la liste partagée des affaires à emporter (modèles plage / montagne / ville / bébé, assignation, filtre « mes affaires »). |
+| **Sur place** | **Mode Jour J** (programme du jour, prochaine étape avec compte à rebours, « Y aller », billets, hébergement du soir, météo), **dépense rapide en 3 secondes** (montant → catégorie), **convertisseur de devises express** (taux gardés hors ligne). |
+| **Organiser** | **Calendrier visuel** (réservations en barres multi-jours + activités), **comparateur d'options** (prix, note, pour/contre, vote, « Choisir » → réservation), **suggestions d'activités autour d'un lieu** (OpenStreetMap/Overpass : incontournables, musées, points de vue, restos, cafés, bars, parcs). |
+| **Budget+** | Répartition **en pourcentages**, **budget par personne en direct** (sa part des dépenses + réservations et activités à venir, multi-devises). |
+| **Partage** | **Album photo partagé** (visionneuse plein écran, filtre par personne, téléchargement zip), **lien invité en lecture seule sans compte** (programme, carte, transports/logements — sans numéros ni budget), **notifications** (modifications des autres, @mentions, échéances ; Web Push optionnel même app fermée). |
 | **Extras** | **Documents à visibilité restreinte** (passeport privé / assurance partagée, alerte d'expiration avant la fin du voyage). Journal / album photo. Programme **imprimable en PDF**. Export **.ics**. Rappel e-mail avant deadline (Edge Function + cron, optionnel). |
 | **PWA** | Installable, consultation hors ligne en lecture seule des derniers voyages chargés (cache TanStack Query persisté + tuiles de carte en cache), bandeau « Hors ligne ». |
 | **UX** | Mobile first (barre d'onglets + bouton « + » : activité / réservation / dépense en deux taps), barre latérale sur desktop, mode clair/sombre, skeletons, toasts, états vides, focus visibles, labels accessibles. Dates « lun. 12 mai », montants en locale FR. i18n prête pour l'anglais. |
@@ -86,7 +90,8 @@ Ouvre http://localhost:5173/vadrouille/, saisis n'importe quel e-mail : tu es co
 3. `supabase/migrations/20250101000200_storage_realtime.sql` (buckets + politiques Storage, publication Realtime)
 4. `supabase/migrations/20250101000300_documents.sql` (documents à visibilité restreinte)
 5. `supabase/migrations/20250101000400_prep_tasks.sql` (préparatifs : tâches d'avant départ)
-6. *(facultatif)* `supabase/seed.sql`, puis, après ta première connexion à l'app :
+6. `supabase/migrations/20250101000500_features.sql` (répartition en %, album, lien invité, comparateur, abonnements push)
+7. *(facultatif)* `supabase/seed.sql`, puis, après ta première connexion à l'app :
    ```sql
    select public.seed_demo_trip((select id from auth.users where email = 'toi@exemple.fr'));
    ```
@@ -186,6 +191,27 @@ Depuis septembre 2026, CARTO exige une clé gratuite pour ses fonds de carte (sa
 2. Ajoute-la en secret GitHub `VITE_CARTO_API_KEY`, puis relance le workflow de déploiement.
 
 C'est une clé **publique** prévue pour le navigateur (elle apparaît dans les URL des tuiles), comme l'`anon key` Supabase.
+
+### Notifications push (optionnel)
+
+Sans configuration, l'app affiche déjà des notifications système quand elle est ouverte ou en arrière-plan (modifications des autres participants, @mentions, échéances du jour). Pour les recevoir **même app fermée** (Web Push, gratuit) :
+
+1. Génère une paire de clés VAPID :
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+2. Secret GitHub `VITE_VAPID_PUBLIC_KEY` = la clé **publique**, puis relance le déploiement.
+3. Secrets Supabase (la clé **privée** ne quitte jamais Supabase) :
+   ```bash
+   npx supabase secrets set VAPID_PUBLIC_KEY=<publique> VAPID_PRIVATE_KEY=<privée> VAPID_SUBJECT=mailto:<ton-email> PUSH_SECRET=<chaîne aléatoire>
+   ```
+4. Déploie la fonction puis exécute `supabase/cron/push-notify.sql` (en remplaçant `<PROJECT_REF>` et `<PUSH_SECRET>`) :
+   ```bash
+   npx supabase functions deploy push-notify --no-verify-jwt
+   ```
+5. Chacun active les notifications dans **Mon profil → Notifications**. Sur iPhone (iOS 16.4+), il faut d'abord installer l'app sur l'écran d'accueil.
+
+La fonction `deadline-reminders` envoie aussi ses rappels en push quand les clés VAPID sont configurées (l'e-mail via Resend devient alors facultatif).
 
 ### 5. Rappels e-mail avant deadline (optionnel)
 

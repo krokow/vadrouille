@@ -11,7 +11,11 @@ import { backend, type PresenceUser } from '@/lib/backend'
 import { useOnline } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { fmtDateRange } from '@/lib/format'
-import { countdownLabel } from '@/lib/dates'
+import { countdownLabel, daysUntil } from '@/lib/dates'
+import { isoDay } from '@/lib/format'
+import { toast } from 'sonner'
+import { buildTodo } from '@/features/activities/logic'
+import { showSystemNotification } from '@/lib/notify'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -93,9 +97,31 @@ function usePresence() {
   return users
 }
 
+/** Une fois par jour et par voyage : rappel des réservations / préparatifs à faire aujourd'hui ou demain */
+function useDeadlineReminder() {
+  const { trip, canEdit } = useTrip()
+  const activities = useTripTable(trip.id, 'activities')
+  const bookings = useTripTable(trip.id, 'bookings')
+  const checklist = useTripTable(trip.id, 'checklist_items')
+  useEffect(() => {
+    if (!canEdit || !activities.data || !bookings.data || !checklist.data) return
+    const key = `vadrouille-remind-${trip.id}-${isoDay()}`
+    try { if (localStorage.getItem(key)) return } catch { return }
+    const urgent = buildTodo(activities.data, bookings.data, new Date(), checklist.data).filter((t) => t.deadline && (daysUntil(t.deadline) ?? 99) <= 1)
+    try { localStorage.setItem(key, '1') } catch { /* ignore */ }
+    if (!urgent.length) return
+    const overdue = urgent.filter((t) => t.urgency === 'overdue').length
+    const title = `⏰ ${urgent.length} chose${urgent.length > 1 ? 's' : ''} à faire ${overdue ? '(dont en retard)' : 'd’ici demain'}`
+    const body = urgent.slice(0, 3).map((t) => t.title).join(' · ')
+    toast.warning(title, { description: body, duration: 8000 })
+    void showSystemNotification(trip.name, `${title} : ${body}`, { url: `#/t/${trip.id}/todo`, tag: `deadline-${trip.id}` })
+  }, [trip.id, trip.name, canEdit, activities.data, bookings.data, checklist.data])
+}
+
 function TripShell() {
   const { t } = useTranslation()
   const { trip, canEdit, role } = useTrip()
+  useDeadlineReminder()
   const online = useOnline()
   const presence = usePresence()
   const location = useLocation()

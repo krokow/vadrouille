@@ -6,6 +6,7 @@ import { queryClient, persister } from '@/lib/queryClient'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { ConfirmProvider } from '@/components/ui/confirm'
 import { RealtimeSync } from './RealtimeSync'
+import { NotificationsSync } from './NotificationsSync'
 import { AppRoutes } from './routes'
 import { useTheme } from './theme'
 
@@ -29,6 +30,7 @@ export function App({ authError, userId }: { authError?: string | null; userId?:
         <AuthProvider>
           <ConfirmProvider>
             <RealtimeSync />
+            <NotificationsSync />
             <AppRoutes />
           </ConfirmProvider>
         </AuthProvider>
