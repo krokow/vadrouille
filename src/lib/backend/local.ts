@@ -28,7 +28,14 @@ function load(): DB {
 
 export function createLocalBackend(): Backend {
   let db: DB = load()
-  const save = () => localStorage.setItem(DB_KEY, JSON.stringify(db))
+  // les événements sont diffusés APRÈS l'écriture, sinon un rechargement déclenché par l'événement lirait l'ancien état
+  let pending: ChangeEvent[] = []
+  const save = () => {
+    localStorage.setItem(DB_KEY, JSON.stringify(db))
+    const events = pending
+    pending = []
+    events.forEach((e) => dispatch(e))
+  }
   const rows = (t: string) => (db[t] ??= [])
   const authListeners = new Set<(u: AuthUser | null) => void>()
   const changeListeners = new Set<(e: ChangeEvent) => void>()
@@ -44,15 +51,18 @@ export function createLocalBackend(): Backend {
   }
   let current = getSessionUser()
 
-  const emit = (e: ChangeEvent, broadcast = true) => {
+  const dispatch = (e: ChangeEvent, broadcast = true) => {
     changeListeners.forEach((l) => l(e))
     if (broadcast) bc?.postMessage({ kind: 'change', e })
+  }
+  const emit = (e: ChangeEvent) => {
+    pending.push(structuredClone(e))
   }
   bc?.addEventListener('message', (msg) => {
     const data = msg.data as { kind: string; e?: ChangeEvent }
     if (data.kind === 'change' && data.e) {
       db = load()
-      emit(data.e, false)
+      dispatch(data.e, false)
     }
   })
 
@@ -246,7 +256,7 @@ export function createLocalBackend(): Backend {
       const profile = rows('profiles').find((p) => p.id === current!.id)
       const ghost = args.ghost_id ? rows('trip_members').find((m) => m.id === args.ghost_id && m.trip_id === trip.id && m.is_ghost && !m.user_id) : undefined
       if (ghost) {
-        Object.assign(ghost, { user_id: current!.id, is_ghost: false, updated_at: now() })
+        Object.assign(ghost, { user_id: current!.id, is_ghost: false, role: 'editor', updated_at: now() })
         emit({ table: 'trip_members', type: 'UPDATE', row: ghost })
       } else {
         doInsert('trip_members', {

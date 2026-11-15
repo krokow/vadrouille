@@ -17,7 +17,12 @@ export function App({ authError }: { authError?: string | null }) {
   return (
     <PersistQueryClientProvider
       client={queryClient}
-      persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 * 7, buster: 'v1' }}
+      persistOptions={{
+        persister,
+        maxAge: 1000 * 60 * 60 * 24 * 7,
+        buster: 'v1',
+        dehydrateOptions: { shouldDehydrateQuery: (q) => q.state.status === 'success' && q.meta?.persist !== false },
+      }}
     >
       <HashRouter>
         <AuthProvider>
