@@ -56,6 +56,19 @@ export default defineConfig({
   ],
   resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
   server: { port: 5173 },
+  build: {
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        // découpage par fournisseur : meilleur cache navigateur entre deux déploiements
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
+          data: ['@tanstack/react-query', '@tanstack/react-query-persist-client', '@tanstack/query-sync-storage-persister', 'zod', 'react-hook-form'],
+        },
+      },
+    },
+  },
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
