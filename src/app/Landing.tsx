@@ -20,7 +20,7 @@ export function Landing() {
         <Wordmark />
         <Button asChild variant="ghost"><Link to="/login">Se connecter</Link></Button>
       </header>
-      <main className="container max-w-5xl pb-16">
+      <main className="container max-w-7xl pb-16">
         <section className="py-10 text-center sm:py-16">
           <p className="mb-3 inline-block rounded-full bg-coral/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-coral">
             Carnet de voyage partagé

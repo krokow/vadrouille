@@ -70,7 +70,7 @@ export default function BookingsPage() {
           {groups.map((g) => (
             <li key={g.day ?? 'none'}>
               <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground first-letter:uppercase">{g.day ? fmtDayLong(g.day) : 'Sans date'}</h2>
-              <div className="space-y-2">
+              <div className="grid gap-2 lg:grid-cols-2">
                 {g.items.map((b) => <BookingCard key={b.id} booking={b} place={b.place_id ? placeById[b.place_id] : undefined} files={filesOf[b.id]} />)}
               </div>
             </li>

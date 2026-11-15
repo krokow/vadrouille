@@ -21,7 +21,7 @@ export function App({ authError, userId }: { authError?: string | null; userId?:
         persister,
         maxAge: 1000 * 60 * 60 * 24 * 7,
         // cache cloisonné par compte : jamais restauré pour un autre utilisateur du même appareil
-        buster: `v1-${userId ?? 'anon'}`,
+        buster: `v2-${userId ?? 'anon'}`,
         dehydrateOptions: { shouldDehydrateQuery: (q) => q.state.status === 'success' && q.meta?.persist !== false },
       }}
     >

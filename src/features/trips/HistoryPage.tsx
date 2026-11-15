@@ -43,7 +43,7 @@ export default function HistoryPage() {
 
   if (log.isLoading) return <ListSkeleton />
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <PageTitle title="Historique" subtitle="Qui a fait quoi dans le voyage" />
       {!groups.length ? (
         <EmptyState icon={History} title="Rien pour l’instant" description="Chaque ajout ou modification apparaîtra ici." />

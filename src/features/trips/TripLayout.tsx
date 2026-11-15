@@ -98,6 +98,8 @@ function TripShell() {
   const location = useLocation()
   const base = `/t/${trip.id}`
   const fullscreen = /\/ticket$/.test(location.pathname)
+  const isMap = /\/map$/.test(location.pathname)
+  const isPlanning = /\/planning$/.test(location.pathname)
 
   useEffect(() => {
     document.title = `${trip.name} · Vadrouille`
@@ -165,13 +167,19 @@ function TripShell() {
           </div>
         )}
 
-        <main className="flex-1 px-4 pb-28 pt-4 lg:px-8 lg:pb-12 lg:pt-8">
-          <div className="mx-auto w-full max-w-4xl">
+        {isMap ? (
+          <main className="flex-1">
             <Outlet />
-          </div>
-        </main>
+          </main>
+        ) : (
+          <main className="flex-1 px-4 pb-28 pt-4 lg:px-10 lg:pb-12 lg:pt-8 2xl:px-14">
+            <div className={cn('mx-auto w-full', isPlanning ? 'max-w-none' : 'max-w-7xl')}>
+              <Outlet />
+            </div>
+          </main>
+        )}
 
-        {canEdit && online && <Fab />}
+        {canEdit && online && !isMap && <Fab />}
 
         {/* Onglets mobile */}
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 pb-safe backdrop-blur lg:hidden no-print" aria-label="Navigation du voyage">

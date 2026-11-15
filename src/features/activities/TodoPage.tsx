@@ -21,7 +21,7 @@ export default function TodoPage() {
 
   if (activities.isLoading || bookings.isLoading) return <ListSkeleton />
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <PageTitle
         title="À réserver"
         subtitle={items.length ? `${items.length} élément${items.length > 1 ? 's' : ''}${overdue ? ` · ${overdue} en retard` : ''}${soon ? ` · ${soon} cette semaine` : ''}` : undefined}

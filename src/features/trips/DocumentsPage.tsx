@@ -36,7 +36,7 @@ export default function DocumentsPage() {
   const mineList = (docs.data ?? []).filter((d) => d.owner_id === userId)
   const shared = (docs.data ?? []).filter((d) => d.owner_id !== userId)
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <PageTitle title="Documents" subtitle="Passeports, assurances, visas… à portée de main" action={<Button onClick={() => setAdding(true)}><Plus /> Ajouter</Button>} />
       <p className="flex items-start gap-2 rounded-2xl bg-accent p-3 text-xs text-accent-foreground">
         <Lock className="mt-0.5 h-4 w-4 shrink-0" />

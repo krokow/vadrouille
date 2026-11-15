@@ -15,7 +15,7 @@ export function AppHeader() {
   const { theme, toggle } = useTheme()
   const avatar = useFileUrl(profile?.avatar_url, 'avatars')
   return (
-    <header className="container flex max-w-5xl items-center justify-between py-4 pt-[max(1rem,env(safe-area-inset-top))]">
+    <header className="container flex max-w-7xl items-center justify-between py-4 pt-[max(1rem,env(safe-area-inset-top))]">
       <Link to="/" aria-label="Accueil"><Wordmark /></Link>
       <div className="flex items-center gap-2">
         {isDemo && <span className="rounded-full bg-warning/20 px-2 py-0.5 text-[10px] font-bold uppercase">Démo</span>}

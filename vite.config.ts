@@ -36,10 +36,10 @@ export default defineConfig({
         runtimeCaching: [
           {
             // tuiles OSM : cache-first, pour revoir la carte hors ligne
-            urlPattern: /^https:\/\/[abc]?\.?tile\.openstreetmap\.org\/.*/i,
+            urlPattern: /^https:\/\/([a-d]\.basemaps\.cartocdn\.com|tile\.openstreetmap\.org|server\.arcgisonline\.com)\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'osm-tiles',
+              cacheName: 'map-tiles',
               expiration: { maxEntries: 800, maxAgeSeconds: 60 * 60 * 24 * 30 },
               cacheableResponse: { statuses: [0, 200] },
             },

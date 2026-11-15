@@ -5,13 +5,17 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useQuery } from '@tanstack/react-query'
-import { CalendarDays, Lightbulb, Plus } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Columns3, Copy, EyeOff, Lightbulb, List, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { useMediaQuery } from '@/lib/hooks'
+import { useConfirm } from '@/components/ui/confirm'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useTrip } from '@/features/trips/TripContext'
 import { useQuickAdd } from '@/features/trips/QuickAdd'
 import { tripDays } from '@/lib/dates'
 import { fmtDay, fmtDayLong, isoDay } from '@/lib/format'
-import { forecast, weatherIcon } from '@/lib/weather'
+import { upcomingDays, weatherIcon } from '@/lib/weather'
+import { useWeather } from '@/features/trips/useWeather'
 import { orderBetween } from '@/lib/order'
 import { PageTitle } from '@/components/PageTitle'
 import { Button } from '@/components/ui/button'
@@ -29,19 +33,21 @@ export default function PlanningPage() {
   const { trip, canEdit, members, writer } = useTrip()
   const quick = useQuickAdd()
   const data = useActivityData()
+  const desktop = useMediaQuery('(min-width: 1024px)')
+  const [view, setViewState] = useState<'list' | 'columns'>(() => (localStorage.getItem('vadrouille-planning-view') as 'list' | 'columns') ?? 'columns')
+  const setView = (v: 'list' | 'columns') => {
+    setViewState(v)
+    try { localStorage.setItem('vadrouille-planning-view', v) } catch { /* ignore */ }
+  }
+  const [hideEmpty, setHideEmpty] = useState(false)
   const days = useMemo(() => {
     const set = new Set(tripDays(trip.start_date, trip.end_date))
     for (const a of data.activities) if (a.day_date) set.add(a.day_date)
     return [...set].sort()
   }, [trip.start_date, trip.end_date, data.activities])
 
-  const weather = useQuery({
-    queryKey: ['weather', trip.lat, trip.lng],
-    queryFn: () => forecast(trip.lat!, trip.lng!),
-    enabled: trip.lat != null && trip.lng != null && days.length > 0,
-    staleTime: 3 * 60 * 60_000,
-  })
-  const weatherByDay = useMemo(() => Object.fromEntries((weather.data ?? []).map((w) => [w.date, w])), [weather.data])
+  const weather = useWeather(trip, days.length > 0)
+  const weatherByDay = useMemo(() => Object.fromEntries(upcomingDays(weather.data).map((w) => [w.date, w])), [weather.data])
 
   // conteneurs : un par jour + idées ; état local pendant le glisser
   const derived = useMemo(() => {
@@ -121,6 +127,9 @@ export default function PlanningPage() {
 
   if (data.loading) return <ListSkeleton rows={5} />
 
+  const columns = view === 'columns' && desktop
+  const visibleDays = hideEmpty ? days.filter((d) => items[d]?.length) : days
+
   const card = (id: string, sortable: boolean) => {
     const a = derived.byId[id]
     if (!a) return null
@@ -137,24 +146,76 @@ export default function PlanningPage() {
             comments={data.commentsOf[a.id]}
             onVote={!a.day_date ? () => data.toggleVote(a.id) : undefined}
             dragHandle={sortable ? handle : undefined}
+            menu={canEdit ? <ActivityMenu activity={a} days={days} /> : undefined}
+            compact={columns}
           />
         )}
       </SortableActivity>
     )
   }
 
+  const dayHeader = (d: string, i: number) => {
+    const w = weatherByDay[d]
+    return (
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 id={`h-${d}`} className={cn('flex items-center gap-2 font-bold first-letter:uppercase', columns ? 'text-sm' : 'text-lg')}>
+          <span className={cn('flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs font-bold', d === today ? 'bg-coral text-coral-foreground' : 'bg-primary/10 text-primary')}>J{i + 1}</span>
+          {columns ? fmtDay(d) : fmtDayLong(d)}
+        </h2>
+        <div className="flex items-center gap-1">
+          {w && <span className="text-xs text-muted-foreground" title={weatherIcon(w.code).label}>{weatherIcon(w.code).icon} {w.tmax}°{!columns && `/${w.tmin}°`}{w.rain >= 40 && !columns ? ` · 💧${w.rain}%` : ''}</span>}
+          {canEdit && <Button variant="ghost" size="icon-sm" aria-label={`Ajouter une activité le ${fmtDay(d)}`} onClick={() => quick({ kind: 'activity', defaults: { day_date: d } })}><Plus /></Button>}
+        </div>
+      </div>
+    )
+  }
+
+  const ideasBlock = (
+    <section id={`day-${IDEAS}`} className={cn('scroll-mt-28 rounded-3xl border border-dashed bg-sand/20 p-3', columns && 'w-80 shrink-0 self-start')}>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className={cn('flex items-center gap-2 font-bold', columns ? 'text-sm' : 'text-lg')}><Lightbulb className="h-5 w-5 text-warning" /> Idées non planifiées</h2>
+        {canEdit && <Button variant="ghost" size="sm" onClick={() => quick({ kind: 'activity', defaults: { day_date: '' } })}><Plus /> Idée</Button>}
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">Votez 👍 pour vos envies, puis glissez-les dans un jour.</p>
+      <DayDropZone id={IDEAS} empty={!items[IDEAS]?.length}>
+        <SortableContext id={IDEAS} items={items[IDEAS] ?? []} strategy={verticalListSortingStrategy}>
+          {(items[IDEAS] ?? []).map((id) => card(id, canEdit))}
+        </SortableContext>
+      </DayDropZone>
+    </section>
+  )
+
   return (
     <div className="space-y-4">
       <PageTitle
         title="Planning"
         subtitle={days.length ? `${days.length} jour${days.length > 1 ? 's' : ''} · ${data.activities.length} activité${data.activities.length > 1 ? 's' : ''}` : 'Ajoute des dates au voyage pour planifier jour par jour'}
-        action={canEdit && <Button onClick={() => quick({ kind: 'activity' })} className="hidden sm:inline-flex"><Plus /> Activité</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            {desktop && days.length > 0 && (
+              <div className="flex rounded-full bg-muted p-1" role="radiogroup" aria-label="Affichage">
+                {([['list', List, 'Liste'], ['columns', Columns3, 'Colonnes']] as const).map(([k, Icon, label]) => (
+                  <button key={k} role="radio" aria-checked={view === k} onClick={() => setView(k)}
+                    className={cn('flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold', view === k ? 'bg-card shadow-sm' : 'text-muted-foreground')}>
+                    <Icon className="h-4 w-4" /> {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {days.length > 0 && (
+              <Button variant={hideEmpty ? 'secondary' : 'ghost'} size="sm" onClick={() => setHideEmpty(!hideEmpty)} aria-pressed={hideEmpty} title="Masquer les jours sans activité">
+                <EyeOff /> <span className="hidden sm:inline">Jours vides</span>
+              </Button>
+            )}
+            {canEdit && <Button onClick={() => quick({ kind: 'activity' })} className="hidden sm:inline-flex"><Plus /> Activité</Button>}
+          </div>
+        }
       />
 
-      {days.length > 1 && (
+      {days.length > 1 && !columns && (
         <div className="sticky top-[57px] z-20 -mx-4 overflow-x-auto bg-background/90 px-4 py-2 backdrop-blur lg:top-0">
           <div className="flex gap-2">
-            {days.map((d) => (
+            {visibleDays.map((d) => (
               <button key={d} onClick={() => scrollTo(d)}
                 className={cn('shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold', d === today ? 'border-coral bg-coral text-coral-foreground' : 'bg-card')}>
                 {fmtDay(d)} {weatherByDay[d] && weatherIcon(weatherByDay[d].code).icon}
@@ -171,49 +232,82 @@ export default function PlanningPage() {
       )}
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => { setActiveId(null); setItems(derived.map) }}>
-        {days.map((d, i) => {
-          const w = weatherByDay[d]
-          return (
-            <section key={d} id={`day-${d}`} className="scroll-mt-28" aria-labelledby={`h-${d}`}>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 id={`h-${d}`} className="flex items-baseline gap-2 font-display text-lg font-semibold first-letter:uppercase">
-                  <span className={cn('flex h-7 min-w-7 items-center justify-center rounded-full px-2 font-sans text-xs font-bold', d === today ? 'bg-coral text-coral-foreground' : 'bg-primary/10 text-primary')}>J{i + 1}</span>
-                  {fmtDayLong(d)}
-                </h2>
-                <div className="flex items-center gap-2">
-                  {w && <span className="text-xs text-muted-foreground" title={weatherIcon(w.code).label}>{weatherIcon(w.code).icon} {w.tmin}°/{w.tmax}°{w.rain >= 40 ? ` · 💧${w.rain}%` : ''}</span>}
-                  {canEdit && <Button variant="ghost" size="icon-sm" aria-label={`Ajouter une activité le ${fmtDay(d)}`} onClick={() => quick({ kind: 'activity', defaults: { day_date: d } })}><Plus /></Button>}
-                </div>
-              </div>
-              <DayDropZone id={d} empty={!items[d]?.length}>
-                <SortableContext id={d} items={items[d] ?? []} strategy={verticalListSortingStrategy}>
-                  {(items[d] ?? []).map((id) => card(id, canEdit))}
-                </SortableContext>
-              </DayDropZone>
-            </section>
-          )
-        })}
-
-        <section id={`day-${IDEAS}`} className="scroll-mt-28 rounded-3xl border border-dashed bg-sand/20 p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-display text-lg font-semibold"><Lightbulb className="h-5 w-5 text-warning" /> Idées non planifiées</h2>
-            {canEdit && <Button variant="ghost" size="sm" onClick={() => quick({ kind: 'activity', defaults: { day_date: '' } })}><Plus /> Idée</Button>}
+        {columns ? (
+          <div className="-mx-10 flex gap-4 overflow-x-auto px-10 pb-4 2xl:-mx-14 2xl:px-14 [scrollbar-width:thin]">
+            {visibleDays.map((d) => (
+              <section key={d} id={`day-${d}`} className="flex w-80 shrink-0 flex-col rounded-3xl bg-muted/40 p-3" aria-labelledby={`h-${d}`}>
+                {dayHeader(d, days.indexOf(d))}
+                <DayDropZone id={d} empty={!items[d]?.length}>
+                  <SortableContext id={d} items={items[d] ?? []} strategy={verticalListSortingStrategy}>
+                    {(items[d] ?? []).map((id) => card(id, canEdit))}
+                  </SortableContext>
+                </DayDropZone>
+              </section>
+            ))}
+            {ideasBlock}
           </div>
-          <p className="mb-3 text-xs text-muted-foreground">Votez 👍 pour vos envies, puis glissez-les dans un jour.</p>
-          <DayDropZone id={IDEAS} empty={!items[IDEAS]?.length}>
-            <SortableContext id={IDEAS} items={items[IDEAS] ?? []} strategy={verticalListSortingStrategy}>
-              {(items[IDEAS] ?? []).map((id) => card(id, canEdit))}
-            </SortableContext>
-          </DayDropZone>
-        </section>
+        ) : (
+          <div className="mx-auto max-w-3xl space-y-4">
+            {visibleDays.map((d) => (
+              <section key={d} id={`day-${d}`} className="scroll-mt-28" aria-labelledby={`h-${d}`}>
+                {dayHeader(d, days.indexOf(d))}
+                <DayDropZone id={d} empty={!items[d]?.length}>
+                  <SortableContext id={d} items={items[d] ?? []} strategy={verticalListSortingStrategy}>
+                    {(items[d] ?? []).map((id) => card(id, canEdit))}
+                  </SortableContext>
+                </DayDropZone>
+              </section>
+            ))}
+            {ideasBlock}
+          </div>
+        )}
 
         <DragOverlay>
           {activeId && derived.byId[activeId] ? (
-            <ActivityCard activity={derived.byId[activeId]} place={data.placeById[derived.byId[activeId].place_id ?? '']} className="rotate-1 shadow-xl ring-2 ring-primary" />
+            <ActivityCard activity={derived.byId[activeId]} place={data.placeById[derived.byId[activeId].place_id ?? '']} className="w-80 rotate-1 shadow-xl ring-2 ring-primary" compact={columns} />
           ) : null}
         </DragOverlay>
       </DndContext>
     </div>
+  )
+}
+
+/** Menu ⋯ d'une activité : modifier, dupliquer, déplacer, marquer réservé, supprimer */
+function ActivityMenu({ activity: a, days }: { activity: Activity; days: string[] }) {
+  const { writer, trip } = useTrip()
+  const quick = useQuickAdd()
+  const confirm = useConfirm()
+  const move = (day: string | null) => writer.update('activities', a.id, { day_date: day, sort_order: Date.now() / 1000 })
+  const duplicate = async () => {
+    const { id: _id, created_at: _c, updated_at: _u, updated_by: _b, ...rest } = a
+    await writer.insert('activities', { ...rest, title: `${a.title} (copie)`, sort_order: a.sort_order + 0.5, trip_id: trip.id })
+    toast.success('Activité dupliquée')
+  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={`Actions pour « ${a.title} »`}><MoreHorizontal className="h-4 w-4" /></button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
+        <DropdownMenuItem onSelect={() => quick({ kind: 'activity', id: a.id })}><Pencil /> Modifier</DropdownMenuItem>
+        <DropdownMenuItem onSelect={duplicate}><Copy /> Dupliquer</DropdownMenuItem>
+        {a.needs_booking && a.booking_status !== 'booked' && (
+          <DropdownMenuItem onSelect={() => writer.update('activities', a.id, { booking_status: 'booked' })}><CheckCircle2 /> Marquer réservé</DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Déplacer vers</DropdownMenuLabel>
+        {days.map((d, i) => (
+          <DropdownMenuItem key={d} disabled={a.day_date === d} onSelect={() => move(d)}>
+            <span className="w-7 text-xs font-bold text-primary">J{i + 1}</span> <span className="first-letter:uppercase">{fmtDay(d)}</span>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuItem disabled={!a.day_date} onSelect={() => move(null)}><Lightbulb /> Idées non planifiées</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem destructive onSelect={async () => {
+          if (await confirm({ title: `Supprimer « ${a.title} » ?`, confirmLabel: 'Supprimer', destructive: true })) await writer.remove('activities', a.id)
+        }}><Trash2 /> Supprimer</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 

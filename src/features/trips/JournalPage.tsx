@@ -49,7 +49,7 @@ export default function JournalPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <PageTitle title="Journal" subtitle="Les souvenirs du voyage, à plusieurs mains" />
       {canEdit && (
         <Card className="space-y-2 p-3">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Camera, Loader2, Moon, Sun, Trash2 } from 'lucide-react'
+import { ArrowLeft, Camera, Loader2, Monitor, Moon, Sun, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from './AuthProvider'
@@ -23,7 +23,7 @@ export function ProfilePage() {
   const { t, i18n } = useTranslation()
   const { user, profile } = useAuth()
   const qc = useQueryClient()
-  const { theme, toggle } = useTheme()
+  const { pref, setPref } = useTheme()
   const [name, setName] = useState('')
   const [color, setColor] = useState(MEMBER_COLORS[0])
   const [currency, setCurrency] = useState('EUR')
@@ -115,9 +115,16 @@ export function ProfilePage() {
         </Card>
         <Card className="mt-4 space-y-3 p-5">
           <h2 className="font-semibold">Préférences</h2>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <span className="text-sm">Thème</span>
-            <Button variant="outline" size="sm" onClick={toggle}>{theme === 'dark' ? <><Sun /> Clair</> : <><Moon /> Sombre</>}</Button>
+            <div className="flex rounded-full bg-muted p-1" role="radiogroup" aria-label="Thème">
+              {([['system', Monitor, 'Auto'], ['light', Sun, 'Clair'], ['dark', Moon, 'Sombre']] as const).map(([k, Icon, label]) => (
+                <button key={k} role="radio" aria-checked={pref === k} onClick={() => setPref(k)}
+                  className={cn('flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold', pref === k ? 'bg-card shadow-sm' : 'text-muted-foreground')}>
+                  <Icon className="h-3.5 w-3.5" /> {label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Langue</span>

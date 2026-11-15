@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar } from '@/components/ui/avatar'
 import { Gauge } from '@/components/ui/progress'
-import { Input } from '@/components/ui/input'
+import { Input, NativeSelect } from '@/components/ui/input'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ListSkeleton } from '@/components/ui/skeleton'
 import { useConfirm } from '@/components/ui/confirm'
@@ -35,6 +35,7 @@ export default function BudgetPage() {
   const settlements = useTripTable(trip.id, 'settlements')
   const budgets = useTripTable(trip.id, 'budgets')
   const [catFilter, setCatFilter] = useState<BudgetCategory | 'all'>('all')
+  const [who, setWho] = useState<string>('all')
   const cur = trip.currency
 
   const list = useMemo(() => expenses.data ?? [], [expenses.data])
@@ -80,7 +81,8 @@ export default function BudgetPage() {
   }
 
   const grouped = useMemo(() => {
-    const filtered = list.filter((e) => catFilter === 'all' || e.category === catFilter).sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at))
+    const sharesOf = new Set((shares.data ?? []).filter((x) => x.member_id === who).map((x) => x.expense_id))
+    const filtered = list.filter((e) => (catFilter === 'all' || e.category === catFilter) && (who === 'all' || e.paid_by === who || sharesOf.has(e.id))).sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at))
     const out: { day: string; items: Expense[]; sum: number }[] = []
     for (const e of filtered) {
       const last = out.at(-1)
@@ -88,7 +90,7 @@ export default function BudgetPage() {
       else out.push({ day: e.date, items: [e], sum: Number(e.amount_main) })
     }
     return out
-  }, [list, catFilter])
+  }, [list, catFilter, who, shares.data])
 
   if (expenses.isLoading) return <ListSkeleton />
 
@@ -116,14 +118,20 @@ export default function BudgetPage() {
       </div>
 
       <Tabs defaultValue="expenses">
-        <TabsList className="w-full">
+        <TabsList className="w-full lg:w-auto">
           <TabsTrigger value="expenses" className="px-2"><Receipt className="hidden sm:block" /> Dépenses</TabsTrigger>
           <TabsTrigger value="balances" className="px-2"><Scale className="hidden sm:block" /> Soldes</TabsTrigger>
           <TabsTrigger value="stats" className="px-2"><PieIcon className="hidden sm:block" /> Stats</TabsTrigger>
           <TabsTrigger value="plan" className="px-2"><Target className="hidden sm:block" /> Prévu</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="expenses" className="space-y-4">
+        <TabsContent value="expenses" className="mx-auto max-w-3xl space-y-4">
+          {list.length > 0 && members.length > 1 && (
+            <NativeSelect value={who} onChange={(e) => setWho(e.target.value)} aria-label="Filtrer par personne" className="sm:w-64">
+              <option value="all">👥 Toutes les personnes</option>
+              {members.map((m) => <option key={m.id} value={m.id}>Concernant {m.display_name}</option>)}
+            </NativeSelect>
+          )}
           {list.length > 0 && (
             <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4">
               <Chip active={catFilter === 'all'} onClick={() => setCatFilter('all')}>Tout</Chip>
@@ -150,7 +158,7 @@ export default function BudgetPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="balances" className="space-y-4">
+        <TabsContent value="balances" className="grid gap-4 lg:grid-cols-2 lg:items-start">
           <Card>
             <CardHeader><CardTitle>Soldes</CardTitle></CardHeader>
             <CardContent className="space-y-2">
@@ -212,7 +220,7 @@ export default function BudgetPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="stats" className="space-y-4">
+        <TabsContent value="stats" className="grid gap-4 lg:grid-cols-2 lg:items-start">
           {!list.length ? <EmptyState icon={PieIcon} title="Pas encore de statistiques" description="Elles apparaîtront avec les premières dépenses." /> : (
             <>
               <Card>

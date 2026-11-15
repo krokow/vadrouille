@@ -64,9 +64,11 @@
   html { -webkit-tap-highlight-color: transparent; }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-feature-settings: 'tnum' 0;
+    font-feature-settings: 'cv11', 'ss01';
+    letter-spacing: -0.006em;
   }
-  h1, h2, h3 { @apply font-display tracking-tight; }
+  h1, h2, h3 { @apply font-display; letter-spacing: -0.025em; }
+  h1 { font-weight: 800; }
   :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
 }
 
@@ -81,7 +83,7 @@
 }
 
 /* Leaflet en mode sombre : on assombrit légèrement les tuiles */
-.dark .leaflet-tile-pane { filter: brightness(0.75) contrast(1.1) saturate(0.85); }
+.dark .dim-tiles { filter: brightness(0.75) contrast(1.1) saturate(0.85); }
 .leaflet-container { font: inherit; background: hsl(var(--muted)); }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); }
 

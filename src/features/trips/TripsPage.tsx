@@ -68,13 +68,13 @@ export function TripsPage() {
   return (
     <div className="min-h-dvh paper">
       <AppHeader />
-      <main className="container max-w-5xl pb-24 pt-2">
+      <main className="container max-w-7xl pb-24 pt-2">
         <div className="mb-5 flex items-end justify-between gap-3">
           <h1 className="text-3xl font-bold">{t('Mes voyages')}</h1>
           <Button onClick={() => setCreating(true)} variant="coral" className="hidden sm:inline-flex"><Plus /> {t('Nouveau voyage')}</Button>
         </div>
         {trips.isLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {[0, 1, 2].map((i) => <Skeleton key={i} className="h-56" />)}
           </div>
         ) : !trips.data?.length ? (
@@ -102,7 +102,7 @@ export function TripsPage() {
             {(['ongoing', 'upcoming', 'past'] as const).map((k) => (
               <TabsContent key={k} value={k}>
                 {groups[k].length ? (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                     {groups[k].map((trip) => <TripCard key={trip.id} trip={trip} members={membersByTrip[trip.id] ?? []} />)}
                   </div>
                 ) : (

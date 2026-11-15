@@ -66,7 +66,7 @@ export default function ChecklistPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <PageTitle title="Bagages" subtitle={list.length ? `${done} / ${list.length} prêts` : 'Liste partagée, chacun coche ce qu’il a pris'}
         action={canEdit && (
           <DropdownMenu>

@@ -18,11 +18,13 @@ export interface ActivityCardProps {
   comments?: number
   onVote?: () => void
   dragHandle?: React.ReactNode
+  menu?: React.ReactNode
+  compact?: boolean
   showUpdated?: boolean
   className?: string
 }
 
-export function ActivityCard({ activity: a, place, attendees = [], totalMembers = 0, votes = 0, voted, comments = 0, onVote, dragHandle, showUpdated, className }: ActivityCardProps) {
+export function ActivityCard({ activity: a, place, attendees = [], totalMembers = 0, votes = 0, voted, comments = 0, onVote, dragHandle, menu, compact, showUpdated, className }: ActivityCardProps) {
   const cat = ACTIVITY_CATEGORIES[a.category] ?? ACTIVITY_CATEGORIES.other
   const time = a.start_time ? `${fmtTime(a.start_time)}${a.end_time ? ` – ${fmtTime(a.end_time)}` : ''}` : a.duration_min ? `${Math.round(a.duration_min / 6) / 10} h` : null
   return (
@@ -39,7 +41,7 @@ export function ActivityCard({ activity: a, place, attendees = [], totalMembers 
           {a.est_cost != null && <span>{fmtMoney(a.est_cost, a.currency ?? 'EUR', { compact: true })}</span>}
           {comments > 0 && <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{comments}</span>}
         </div>
-        {(a.needs_booking || Object.values(a.attention_notes ?? {}).some(Boolean)) && (
+        {(a.needs_booking || (!compact && Object.values(a.attention_notes ?? {}).some(Boolean))) && (
           <div className="mt-2 flex flex-wrap gap-1">
             {a.needs_booking && <DeadlineBadge deadline={a.booking_deadline ?? a.day_date} booked={a.booking_status === 'booked'} />}
             {a.attention_notes?.closed_days && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px]">🚫 {a.attention_notes.closed_days}</span>}
@@ -49,6 +51,7 @@ export function ActivityCard({ activity: a, place, attendees = [], totalMembers 
         {showUpdated && <UpdatedBy row={a} className="mt-1 block" />}
       </div>
       <div className="relative z-10 flex flex-col items-end justify-between gap-2">
+        {menu}
         {onVote ? (
           <button
             onClick={onVote}
@@ -61,7 +64,7 @@ export function ActivityCard({ activity: a, place, attendees = [], totalMembers 
         ) : votes > 0 ? (
           <span className="flex items-center gap-1 text-xs text-muted-foreground"><ThumbsUp className="h-3 w-3" />{votes}</span>
         ) : <span />}
-        {attendees.length > 0 && attendees.length < totalMembers && (
+        {!compact && attendees.length > 0 && attendees.length < totalMembers && (
           <AvatarStack people={attendees.map((m) => ({ id: m.id, name: m.display_name, color: m.color }))} size="xs" max={3} />
         )}
       </div>

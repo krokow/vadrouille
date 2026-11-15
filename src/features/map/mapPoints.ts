@@ -19,6 +19,7 @@ export interface MapPoint {
   title: string
   day: string | null
   sort: string
+  time?: string | null
   to: string | null
   status?: string
 }
@@ -35,7 +36,8 @@ export function buildPoints(base: string, places: Place[], activities: Activity[
     out.push({
       key: `a-${a.id}`, place, kind: a.category === 'food' ? 'food' : 'activity',
       emoji: ACTIVITY_CATEGORIES[a.category]?.emoji ?? '📍', title: a.title, day: a.day_date,
-      sort: `${a.day_date ?? '9999'}-${a.start_time ?? '99'}-${String(a.sort_order).padStart(12, '0')}`,
+      sort: `${a.day_date ?? '9999'}-${a.start_time ?? '99'}-${String(Math.round((a.sort_order + 1e9) * 1000)).padStart(20, '0')}`,
+      time: a.start_time,
       to: `${base}/activities/${a.id}`,
     })
   }

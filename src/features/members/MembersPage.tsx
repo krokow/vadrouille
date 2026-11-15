@@ -94,7 +94,7 @@ export function MembersPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-3xl space-y-5">
       <PageTitle title="Participants" subtitle={`${members.length} personne${members.length > 1 ? 's' : ''}`} />
 
       {isOwner && (

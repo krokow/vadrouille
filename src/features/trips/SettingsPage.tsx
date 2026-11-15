@@ -55,7 +55,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-3xl space-y-5">
       <PageTitle title="Paramètres du voyage" />
       <Card className="overflow-hidden">
         <TripCover trip={trip} className="h-32" />

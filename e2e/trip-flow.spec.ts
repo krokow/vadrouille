@@ -46,9 +46,10 @@ test('le rechargement d’une page profonde fonctionne (routing hash)', async ({
   await expect(page.getByRole('heading', { name: 'Budget' })).toBeVisible()
 })
 
-test('pas de défilement horizontal à 375 px', async ({ page }) => {
+test('pas de défilement horizontal à 375 px (voyage d’exemple complet)', async ({ page }) => {
   await login(page, 'mobile@exemple.fr')
-  await createTrip(page, 'Mobile')
+  await page.getByRole('button', { name: /voyage d’exemple/ }).click()
+  await expect(page.getByRole('heading', { name: 'Lisbonne entre amis (exemple)', level: 1 }).first()).toBeVisible()
   for (const tab of ['Accueil', 'Planning', 'Réservations', 'Budget']) {
     await page.getByRole('navigation').getByRole('link', { name: tab }).click()
     await page.waitForTimeout(200)

@@ -95,12 +95,24 @@ export async function reverseGeocode(lat: number, lng: number): Promise<GeoResul
   })
 }
 
-/** Itinéraire routier via le serveur public OSRM (usage modéré, optionnel) */
-export async function osrmRoute(points: { lat: number; lng: number }[], profile: 'driving' | 'foot' = 'driving'): Promise<{ coords: [number, number][]; km: number; minutes: number } | null> {
+export type RouteMode = 'foot' | 'bike' | 'car'
+
+export interface RouteResult {
+  coords: [number, number][]
+  km: number
+  minutes: number
+  legs: { km: number; minutes: number }[]
+}
+
+/**
+ * Itinéraire via les serveurs OSRM publics de FOSSGIS (routing.openstreetmap.de) :
+ * à pied, à vélo ou en voiture, gratuits et sans clé. Usage modéré : uniquement à la demande.
+ */
+export async function osrmRoute(points: { lat: number; lng: number }[], mode: RouteMode = 'foot'): Promise<RouteResult | null> {
   if (points.length < 2) return null
-  const coords = points.map((p) => `${p.lng},${p.lat}`).join(';')
-  const host = profile === 'foot' ? 'https://routing.openstreetmap.de/routed-foot' : 'https://router.project-osrm.org'
-  const res = await fetch(`${host}/route/v1/${profile === 'foot' ? 'foot' : 'driving'}/${coords}?overview=full&geometries=geojson`)
+  const coords = points.map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(';')
+  const profile = { foot: 'routed-foot', bike: 'routed-bike', car: 'routed-car' }[mode]
+  const res = await fetch(`https://routing.openstreetmap.de/${profile}/route/v1/driving/${coords}?overview=full&geometries=geojson`)
   if (!res.ok) throw new Error('Calcul d’itinéraire indisponible')
   const json = await res.json()
   const r = json.routes?.[0]
@@ -109,6 +121,7 @@ export async function osrmRoute(points: { lat: number; lng: number }[], profile:
     coords: (r.geometry.coordinates as [number, number][]).map(([lng, lat]) => [lat, lng]),
     km: r.distance / 1000,
     minutes: r.duration / 60,
+    legs: (r.legs as { distance: number; duration: number }[]).map((l) => ({ km: l.distance / 1000, minutes: l.duration / 60 })),
   }
 }
 

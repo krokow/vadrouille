@@ -48,7 +48,7 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4">
       <Button variant="ghost" className="-ml-2" onClick={() => (history.length > 1 ? navigate(-1) : navigate(`/t/${trip.id}/bookings`))}><ArrowLeft /> Retour</Button>
       <div className="flex items-start gap-3">
         <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl" style={{ backgroundColor: `${t.color}22` }} aria-hidden>{t.emoji}</span>
@@ -71,6 +71,8 @@ export default function BookingPage() {
         {canEdit && b.status === 'to_book' && <Button size="sm" onClick={() => writer.update('bookings', b.id, { status: 'booked' })}><Check /> Réservé</Button>}
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <div className="space-y-4">
       {(b.confirmation_code || b.start_at) && (
         <Card className="overflow-hidden">
           <CardContent className="space-y-3 p-4">
@@ -98,7 +100,17 @@ export default function BookingPage() {
           </CardContent>
         </Card>
       )}
-
+      {b.notes && <Card><CardHeader><CardTitle>Notes</CardTitle></CardHeader><CardContent><p className="whitespace-pre-wrap text-sm">{b.notes}</p></CardContent></Card>}
+      <Card>
+        <CardHeader><CardTitle>Billets et documents</CardTitle></CardHeader>
+        <CardContent><Attachments parentType="booking" parentId={b.id} /></CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Commentaires</CardTitle></CardHeader>
+        <CardContent><Comments parentType="booking" parentId={b.id} /></CardContent>
+      </Card>
+        </div>
+        <div className="space-y-4">
       {place && (
         <Card>
           <CardContent className="space-y-2 p-4">
@@ -108,8 +120,7 @@ export default function BookingPage() {
           </CardContent>
         </Card>
       )}
-
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
         <Card>
           <CardContent className="space-y-2 p-4">
             <p className="text-xs text-muted-foreground">Prix</p>
@@ -137,7 +148,6 @@ export default function BookingPage() {
           </Card>
         )}
       </div>
-
       {linkedActivities.length > 0 && (
         <Card>
           <CardHeader><CardTitle>Activités liées</CardTitle></CardHeader>
@@ -146,20 +156,16 @@ export default function BookingPage() {
           </CardContent>
         </Card>
       )}
-
       {b.url && (
         <Button asChild variant="outline" className="w-full justify-start"><a href={b.url} target="_blank" rel="noreferrer"><ExternalLink /> {hostname(b.url)}</a></Button>
       )}
-      {b.notes && <Card><CardHeader><CardTitle>Notes</CardTitle></CardHeader><CardContent><p className="whitespace-pre-wrap text-sm">{b.notes}</p></CardContent></Card>}
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader><CardTitle>Billets et documents</CardTitle></CardHeader>
-        <CardContent><Attachments parentType="booking" parentId={b.id} /></CardContent>
-      </Card>
-      <Card>
-        <CardHeader><CardTitle>Commentaires</CardTitle></CardHeader>
-        <CardContent><Comments parentType="booking" parentId={b.id} /></CardContent>
-      </Card>
+
+
+
+
     </div>
   )
 }

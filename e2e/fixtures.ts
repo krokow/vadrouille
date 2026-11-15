@@ -17,8 +17,9 @@ export async function mockExternal(ctx: BrowserContext) {
     }))
     return route.fulfill({ json: { features } })
   })
-  await ctx.route(/tile\.openstreetmap\.org/, (r) => r.fulfill({ body: PNG, contentType: 'image/png' }))
+  await ctx.route(/tile\.openstreetmap\.org|basemaps\.cartocdn\.com|arcgisonline\.com/, (r) => r.fulfill({ body: PNG, contentType: 'image/png' }))
   await ctx.route('https://api.open-meteo.com/**', (r) => r.fulfill({ json: { daily: { time: [], weather_code: [], temperature_2m_max: [], temperature_2m_min: [], precipitation_probability_max: [] } } }))
+  await ctx.route('https://routing.openstreetmap.de/**', (r) => r.fulfill({ status: 503, body: '' }))
   await ctx.route('https://api.frankfurter.app/**', (r) => r.fulfill({ json: { rates: { EUR: 0.9 } } }))
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ body: '' }))
 }

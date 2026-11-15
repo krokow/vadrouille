@@ -51,7 +51,7 @@ export default function ActivityPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4">
       <Button variant="ghost" className="-ml-2" onClick={() => (history.length > 1 ? navigate(-1) : navigate(`/t/${trip.id}/planning`))}><ArrowLeft /> Retour</Button>
       <div className="flex items-start gap-3">
         <span className="text-4xl" aria-hidden>{cat.emoji}</span>
@@ -67,6 +67,11 @@ export default function ActivityPage() {
         {canEdit && <Button variant="outline" size="icon" aria-label="Modifier" onClick={() => quick({ kind: 'activity', id: a.id })}><Pencil /></Button>}
       </div>
 
+
+
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <div className="space-y-4">
       {a.needs_booking && (
         <Card className={a.booking_status === 'booked' ? 'border-success/40' : 'border-warning/60 bg-warning/5'}>
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -84,9 +89,7 @@ export default function ActivityPage() {
           </CardContent>
         </Card>
       )}
-
       {a.description && <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{a.description}</p>}
-
       {attention.length > 0 && (
         <Card>
           <CardHeader><CardTitle>⚠️ Points d’attention</CardTitle></CardHeader>
@@ -102,7 +105,29 @@ export default function ActivityPage() {
           </CardContent>
         </Card>
       )}
-
+      {myLinks.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Liens</CardTitle></CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {myLinks.map((l) => (
+              <a key={l.id} href={l.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-accent">
+                <ExternalLink className="h-4 w-4 shrink-0 text-primary" />
+                <span className="font-semibold">{l.label || hostname(l.url)}</span>
+                {l.label && <span className="truncate text-xs text-muted-foreground">{hostname(l.url)}</span>}
+              </a>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+      {a.notes && (
+        <Card><CardHeader><CardTitle>Notes</CardTitle></CardHeader><CardContent><p className="whitespace-pre-wrap text-sm">{a.notes}</p></CardContent></Card>
+      )}
+      <Card>
+        <CardHeader><CardTitle>Commentaires</CardTitle></CardHeader>
+        <CardContent><Comments parentType="activity" parentId={a.id} /></CardContent>
+      </Card>
+        </div>
+        <div className="space-y-4">
       {place && (
         <Card>
           <CardContent className="space-y-3 p-4">
@@ -120,8 +145,7 @@ export default function ActivityPage() {
           </CardContent>
         </Card>
       )}
-
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
         {(a.est_cost != null || canEdit) && (
           <Card>
             <CardContent className="flex items-center justify-between gap-2 p-4">
@@ -151,35 +175,17 @@ export default function ActivityPage() {
           </CardContent>
         </Card>
       </div>
-
-      {myLinks.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle>Liens</CardTitle></CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {myLinks.map((l) => (
-              <a key={l.id} href={l.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-accent">
-                <ExternalLink className="h-4 w-4 shrink-0 text-primary" />
-                <span className="font-semibold">{l.label || hostname(l.url)}</span>
-                {l.label && <span className="truncate text-xs text-muted-foreground">{hostname(l.url)}</span>}
-              </a>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {a.notes && (
-        <Card><CardHeader><CardTitle>Notes</CardTitle></CardHeader><CardContent><p className="whitespace-pre-wrap text-sm">{a.notes}</p></CardContent></Card>
-      )}
-
       <Card>
         <CardHeader><CardTitle>Pièces jointes</CardTitle></CardHeader>
         <CardContent><Attachments parentType="activity" parentId={a.id} /></CardContent>
       </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader><CardTitle>Commentaires</CardTitle></CardHeader>
-        <CardContent><Comments parentType="activity" parentId={a.id} /></CardContent>
-      </Card>
+
+
+
+
     </div>
   )
 }
