@@ -11,6 +11,7 @@ import { TripsPage } from '@/features/trips/TripsPage'
 import { TripLayout } from '@/features/trips/TripLayout'
 
 const ProfilePage = lazy(() => import('@/features/auth/ProfilePage').then((m) => ({ default: m.ProfilePage })))
+const GuestPage = lazy(() => import('@/features/members/GuestPage').then((m) => ({ default: m.GuestPage })))
 const JoinPage = lazy(() => import('@/features/members/JoinPage').then((m) => ({ default: m.JoinPage })))
 const DashboardPage = lazy(() => import('@/features/trips/DashboardPage'))
 const MembersPage = lazy(() => import('@/features/members/MembersPage').then((m) => ({ default: m.MembersPage })))
@@ -28,6 +29,7 @@ const ChecklistPage = lazy(() => import('@/features/trips/ChecklistPage'))
 const JournalPage = lazy(() => import('@/features/trips/JournalPage'))
 const TodayPage = lazy(() => import('@/features/trips/TodayPage'))
 const ComparePage = lazy(() => import('@/features/trips/ComparePage'))
+const AlbumPage = lazy(() => import('@/features/trips/AlbumPage'))
 const DocumentsPage = lazy(() => import('@/features/trips/DocumentsPage'))
 const PrintPage = lazy(() => import('@/features/trips/PrintPage'))
 
@@ -57,6 +59,7 @@ export function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+        <Route path="/share/:token" element={<GuestPage />} />
         <Route path="/join/:token" element={<RequireAuth><JoinPage /></RequireAuth>} />
         <Route path="/t/:tripId" element={<RequireAuth><TripLayout /></RequireAuth>}>
           <Route index element={page(<DashboardPage />)} />
@@ -75,6 +78,7 @@ export function AppRoutes() {
           <Route path="journal" element={page(<JournalPage />)} />
           <Route path="today" element={page(<TodayPage />)} />
           <Route path="compare" element={page(<ComparePage />)} />
+          <Route path="album" element={page(<AlbumPage />)} />
           <Route path="documents" element={page(<DocumentsPage />)} />
           <Route path="print" element={page(<PrintPage />)} />
         </Route>

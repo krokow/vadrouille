@@ -39,6 +39,7 @@
     "class-variance-authority": "0.7.0",
     "clsx": "2.1.1",
     "date-fns": "3.6.0",
+    "fflate": "^0.8.2",
     "i18next": "23.16.5",
     "leaflet": "1.9.4",
     "lucide-react": "0.456.0",

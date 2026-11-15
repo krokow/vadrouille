@@ -21,6 +21,9 @@ import { PageTitle } from '@/components/PageTitle'
 export function inviteUrl(token: string) {
   return `${window.location.origin}${import.meta.env.BASE_URL}#/join/${token}`
 }
+export function shareUrl(token: string) {
+  return `${window.location.origin}${import.meta.env.BASE_URL}#/share/${token}`
+}
 
 export function MembersPage() {
   const { trip, members, isOwner, writer, me } = useTrip()
@@ -132,6 +135,8 @@ export function MembersPage() {
         </Card>
       )}
 
+      {isOwner && <GuestLinkCard />}
+
       <Card>
         <CardContent className="divide-y p-0">
           {members.map((m) => (
@@ -206,5 +211,45 @@ export function MembersPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+/** Lien invité : consultation sans compte, en lecture seule (programme, carte, transports et logements) */
+function GuestLinkCard() {
+  const { trip, writer } = useTrip()
+  const [qr, setQr] = useState(false)
+  const url = trip.share_token ? shareUrl(trip.share_token) : ''
+  const toggle = async (on: boolean) => {
+    await writer.update('trips', trip.id, { share_enabled: on, ...(on && !trip.share_token ? { share_token: randomToken() } : {}) })
+  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Eye className="h-4 w-4 text-primary" /> Lien invité (sans compte)</CardTitle>
+        <Switch checked={!!trip.share_enabled} onCheckedChange={toggle} aria-label="Activer le lien invité" />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">Pour les grands-parents ou les amis qui veulent suivre le voyage : programme, carte et transports/logements, <strong>sans</strong> numéros de réservation, prix ni budget.</p>
+        {trip.share_enabled && url && (
+          <>
+            <div className="flex gap-2">
+              <Input readOnly value={url} onFocus={(e) => e.target.select()} aria-label="Lien invité" className="font-mono text-xs" />
+              <Button variant="outline" size="icon" aria-label="Copier le lien invité" onClick={async () => { await navigator.clipboard.writeText(url); toast.success('Lien invité copié') }}><Copy /></Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setQr(true)}><QrCode /> QR code</Button>
+              <Button variant="outline" asChild><a href={url} target="_blank" rel="noreferrer"><Eye /> Aperçu</a></Button>
+              <Button variant="ghost" onClick={() => writer.update('trips', trip.id, { share_token: randomToken() }).then(() => toast.success('Nouveau lien invité généré'))}><RefreshCw /> Régénérer</Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+      <Dialog open={qr} onOpenChange={setQr}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Suivre le voyage</DialogTitle><DialogDescription>Lecture seule, sans compte</DialogDescription></DialogHeader>
+          <DialogBody className="flex justify-center pb-8"><div className="rounded-3xl bg-white p-5"><QRCodeSVG value={url} size={240} fgColor="#163f4f" /></div></DialogBody>
+        </DialogContent>
+      </Dialog>
+    </Card>
   )
 }
