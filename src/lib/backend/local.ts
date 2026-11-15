@@ -82,6 +82,7 @@ export function createLocalBackend(): Backend {
     if (!current) return false
     if (table === 'trips') return !!memberOf(r.id)
     if (table === 'profiles') return true
+    if (table === 'documents') return !!memberOf(r.trip_id) && (r.visibility === 'trip' || r.owner_id === current.id)
     return !!memberOf(r.trip_id)
   }
 
@@ -95,6 +96,7 @@ export function createLocalBackend(): Backend {
     }
     if (table === 'trip_members') return isOwner(r.trip_id) || (op === 'delete' && r.user_id === current!.id) || deny()
     if (table === 'comments' || table === 'activity_votes') return !!memberOf(r.trip_id) || deny()
+    if (table === 'documents') return (!!memberOf(r.trip_id) && r.owner_id === current!.id) || deny()
     if (table === 'activity_log') return deny()
     return canEdit(r.trip_id) || deny()
   }

@@ -9,7 +9,7 @@ import { RealtimeSync } from './RealtimeSync'
 import { AppRoutes } from './routes'
 import { useTheme } from './theme'
 
-export function App({ authError }: { authError?: string | null }) {
+export function App({ authError, userId }: { authError?: string | null; userId?: string | null }) {
   const { theme } = useTheme()
   useEffect(() => {
     if (authError) toast.error(`Connexion impossible : ${authError}. Redemande un lien.`)
@@ -20,7 +20,8 @@ export function App({ authError }: { authError?: string | null }) {
       persistOptions={{
         persister,
         maxAge: 1000 * 60 * 60 * 24 * 7,
-        buster: 'v1',
+        // cache cloisonné par compte : jamais restauré pour un autre utilisateur du même appareil
+        buster: `v1-${userId ?? 'anon'}`,
         dehydrateOptions: { shouldDehydrateQuery: (q) => q.state.status === 'success' && q.meta?.persist !== false },
       }}
     >

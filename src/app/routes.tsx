@@ -26,6 +26,7 @@ const BudgetPage = lazy(() => import('@/features/budget/BudgetPage'))
 const HistoryPage = lazy(() => import('@/features/trips/HistoryPage'))
 const ChecklistPage = lazy(() => import('@/features/trips/ChecklistPage'))
 const JournalPage = lazy(() => import('@/features/trips/JournalPage'))
+const DocumentsPage = lazy(() => import('@/features/trips/DocumentsPage'))
 const PrintPage = lazy(() => import('@/features/trips/PrintPage'))
 
 function Home() {
@@ -70,6 +71,7 @@ export function AppRoutes() {
           <Route path="history" element={page(<HistoryPage />)} />
           <Route path="checklist" element={page(<ChecklistPage />)} />
           <Route path="journal" element={page(<JournalPage />)} />
+          <Route path="documents" element={page(<DocumentsPage />)} />
           <Route path="print" element={page(<PrintPage />)} />
         </Route>
         <Route path="*" element={<NotFound />} />

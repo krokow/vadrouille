@@ -18,7 +18,7 @@ async function boot() {
     authError = p.get('error_description') ?? 'Lien invalide'
     history.replaceState(null, '', window.location.pathname + window.location.search + '#/login')
   }
-  await backend.getUser() // attend l'initialisation de la session (et le nettoyage du fragment)
+  const user = await backend.getUser() // attend l'initialisation de la session (et le nettoyage du fragment)
 
   const url = new URL(window.location.href)
   const next = url.searchParams.get('next')
@@ -33,7 +33,7 @@ async function boot() {
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <App authError={authError} />
+      <App authError={authError} userId={user?.id ?? null} />
     </StrictMode>,
   )
 }

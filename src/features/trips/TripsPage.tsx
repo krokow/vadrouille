@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, MapPin, Compass, Luggage } from 'lucide-react'
+import { Plus, MapPin, Compass, Luggage, Sparkles, Loader2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { useAuth } from '@/features/auth/AuthProvider'
+import { qk } from '@/lib/data'
+import { createSampleTrip } from './sample'
 import { useAllMembers, useTrips } from '@/lib/data'
 import { tripPhase, countdownLabel, type TripPhase } from '@/lib/dates'
 import { fmtDateRange } from '@/lib/format'
@@ -21,6 +27,24 @@ export function TripsPage() {
   const trips = useTrips()
   const members = useAllMembers()
   const [creating, setCreating] = useState(false)
+  const [sampling, setSampling] = useState(false)
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+  const sample = async () => {
+    if (!user) return
+    setSampling(true)
+    try {
+      const id = await createSampleTrip(user.id)
+      await qc.invalidateQueries({ queryKey: qk.trips })
+      await qc.invalidateQueries({ queryKey: qk.allMembers })
+      navigate(`/t/${id}`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Impossible de créer l’exemple')
+    } finally {
+      setSampling(false)
+    }
+  }
 
   const groups = useMemo(() => {
     const g: Record<'upcoming' | 'ongoing' | 'past', Trip[]> = { upcoming: [], ongoing: [], past: [] }
@@ -58,7 +82,12 @@ export function TripsPage() {
             icon={Luggage}
             title="Aucun voyage pour l'instant"
             description="Crée ton premier voyage puis invite tes compagnons avec un simple lien."
-            action={<Button variant="coral" onClick={() => setCreating(true)}><Plus /> Créer un voyage</Button>}
+            action={
+              <div className="flex flex-col items-center gap-2 sm:flex-row">
+                <Button variant="coral" onClick={() => setCreating(true)}><Plus /> Créer un voyage</Button>
+                <Button variant="outline" onClick={sample} disabled={sampling}>{sampling ? <Loader2 className="animate-spin" /> : <Sparkles />} Voir un voyage d’exemple</Button>
+              </div>
+            }
           />
         ) : (
           <Tabs defaultValue={defaultTab}>

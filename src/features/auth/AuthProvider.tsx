@@ -26,7 +26,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
     const off = backend.onAuthChange((u) => {
       setUser((prev) => {
-        if (prev?.id !== u?.id) qc.clear() // changement de compte : on vide le cache
+        if (prev?.id !== u?.id) {
+          // changement de compte / déconnexion : on vide le cache mémoire et le cache hors ligne
+          qc.clear()
+          try {
+            localStorage.removeItem('vadrouille-cache')
+          } catch { /* stockage indisponible */ }
+        }
         return u
       })
       setLoading(false)

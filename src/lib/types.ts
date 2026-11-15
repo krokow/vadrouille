@@ -208,6 +208,20 @@ export interface JournalEntry extends Base {
   photo_path: string | null
 }
 
+export type DocumentKind = 'passport' | 'id' | 'insurance' | 'visa' | 'health' | 'license' | 'other'
+export interface TripDocument extends Base {
+  trip_id: string
+  owner_id: string
+  title: string
+  kind: DocumentKind
+  visibility: 'trip' | 'private'
+  storage_path: string | null
+  file_name: string | null
+  mime: string | null
+  expires_on: string | null
+  notes: string | null
+}
+
 export interface TableMap {
   profiles: Profile
   trips: Trip
@@ -228,12 +242,13 @@ export interface TableMap {
   activity_log: ActivityLogEntry
   checklist_items: ChecklistItem
   journal_entries: JournalEntry
+  documents: TripDocument
 }
 export type TableName = keyof TableMap
 /** Tables rattachées à un voyage (colonne trip_id) */
 export const TRIP_TABLES = [
   'trip_members', 'places', 'activities', 'activity_links', 'activity_votes', 'activity_attendees',
   'bookings', 'booking_attendees', 'attachments', 'expenses', 'expense_shares', 'settlements',
-  'budgets', 'comments', 'activity_log', 'checklist_items', 'journal_entries',
+  'budgets', 'comments', 'activity_log', 'checklist_items', 'journal_entries', 'documents',
 ] as const satisfies readonly TableName[]
 export type TripTable = (typeof TRIP_TABLES)[number]

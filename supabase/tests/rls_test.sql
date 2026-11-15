@@ -124,6 +124,27 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'PASS: avatars : chacun son dossier';
 end $$;
 
+-- documents à visibilité restreinte
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+insert into documents (trip_id, owner_id, title, kind, visibility, storage_path)
+  values ('11111111-1111-1111-1111-111111111111', auth.uid(), 'Passeport Alice', 'passport', 'private',
+          '11111111-1111-1111-1111-111111111111/private/00000000-0000-0000-0000-00000000000a/passeport.pdf');
+insert into documents (trip_id, owner_id, title, kind, visibility)
+  values ('11111111-1111-1111-1111-111111111111', auth.uid(), 'Assurance groupe', 'insurance', 'trip');
+insert into storage.objects (bucket_id, name) values ('trip-files', '11111111-1111-1111-1111-111111111111/private/00000000-0000-0000-0000-00000000000a/passeport.pdf');
+select pg_temp.check((select count(*) from documents) = 2, 'documents : le propriétaire voit ses documents privés');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select pg_temp.check((select count(*) from documents) = 1, 'documents : un autre membre ne voit que les documents partagés');
+select pg_temp.check((select count(*) from storage.objects where name like '%/private/%') = 0, 'storage : fichier privé invisible pour les autres membres');
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('trip-files', '11111111-1111-1111-1111-111111111111/private/00000000-0000-0000-0000-00000000000a/faux.pdf');
+  raise exception 'FAIL: dépôt dans le dossier privé d''un autre';
+exception when insufficient_privilege then raise notice 'PASS: storage : impossible d''écrire dans le dossier privé d''un autre';
+end $$;
+update documents set title = 'Piraté';
+reset role;
+select pg_temp.check((select count(*) from documents where title = 'Piraté') = 0, 'documents : seul le propriétaire modifie');
+
 -- garder un organisateur
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 do $$ begin
@@ -144,5 +165,11 @@ select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 delete from trips where id = '11111111-1111-1111-1111-111111111111';
 reset role;
 select pg_temp.check((select count(*) from trips) = 0 and (select count(*) from activities) = 0, 'organisateur : suppression en cascade');
+
+-- seed de démo
+select pg_temp.check(seed_demo_trip('00000000-0000-0000-0000-00000000000e') is not null, 'seed : voyage de démo créé');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000e');
+select pg_temp.check((select count(*) from activities) = 6 and (select count(*) from trip_members) = 3, 'seed : contenu visible par son propriétaire');
+reset role;
 
 \echo 'Tous les tests RLS sont passés ✅'
