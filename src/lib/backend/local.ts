@@ -232,6 +232,25 @@ export function createLocalBackend(): Backend {
       victims.forEach((v) => guardWrite(table, v, 'delete'))
       const ids = new Set(victims.map((v) => v.id))
       removeWhere(table, (r) => ids.has(r.id))
+      // cascades équivalentes aux clés étrangères Postgres
+      const CASCADE: Record<string, [TableName, string][]> = {
+        expenses: [['expense_shares', 'expense_id']],
+        activities: [['activity_links', 'activity_id'], ['activity_votes', 'activity_id'], ['activity_attendees', 'activity_id']],
+        bookings: [['booking_attendees', 'booking_id']],
+      }
+      for (const [child, fk] of CASCADE[table] ?? []) removeWhere(child, (r) => ids.has(r[fk] as string))
+      if (['activities', 'bookings', 'expenses', 'journal_entries'].includes(table)) {
+        removeWhere('comments', (r) => ids.has(r.parent_id as string))
+        removeWhere('attachments', (r) => ids.has(r.parent_id as string))
+      }
+      const SET_NULL: Record<string, [TableName, string][]> = {
+        bookings: [['activities', 'linked_booking_id'], ['expenses', 'booking_id']],
+        activities: [['expenses', 'activity_id']],
+        places: [['activities', 'place_id'], ['bookings', 'place_id']],
+      }
+      for (const [child, fk] of SET_NULL[table] ?? []) {
+        for (const r of rows(child)) if (ids.has(r[fk] as string)) { r[fk] = null; emit({ table: child, type: 'UPDATE', row: r }) }
+      }
       if (table === 'trips') {
         for (const t of TRIP_TABLES) removeWhere(t, (r) => ids.has(r.trip_id as string))
       }

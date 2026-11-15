@@ -295,3 +295,21 @@ end $$;
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 revoke all on all tables in schema public from anon;
+
+-- ---------------------------------------------------------------- nettoyage des commentaires / pièces jointes orphelins
+create or replace function public.tg_cleanup_children()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  delete from comments where parent_id = old.id;
+  delete from attachments where parent_id = old.id;
+  return old;
+end $$;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['activities','bookings','expenses','journal_entries']
+  loop
+    execute format('create trigger cleanup_children after delete on public.%I for each row execute function public.tg_cleanup_children()', t);
+  end loop;
+end $$;

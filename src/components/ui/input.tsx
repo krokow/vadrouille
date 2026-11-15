@@ -17,16 +17,14 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
 Textarea.displayName = 'Textarea'
 
 /** Select natif stylé : meilleure ergonomie sur mobile que les listes custom */
+const CHEVRON = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23889' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`
+
 export const NativeSelect = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
-  ({ className, children, ...props }, ref) => (
+  ({ className, children, style, ...props }, ref) => (
     <select
       ref={ref}
-      className={cn(
-        base,
-        'h-11 sm:h-10 appearance-none bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat pr-9',
-        "bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23889' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")]",
-        className,
-      )}
+      className={cn(base, 'h-11 appearance-none pr-9 sm:h-10', className)}
+      style={{ backgroundImage: CHEVRON, backgroundSize: '16px', backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', ...style }}
       {...props}
     >
       {children}
