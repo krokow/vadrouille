@@ -84,3 +84,39 @@ export function mapsLinks(lat: number, lng: number, name?: string) {
     osm: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}`,
   }
 }
+
+export async function reverseGeocode(lat: number, lng: number): Promise<GeoResult | null> {
+  return throttle(async () => {
+    const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&lang=fr&limit=1`)
+    if (!res.ok) return null
+    const json = (await res.json()) as { features: PhotonFeature[] }
+    const f = json.features[0]
+    return f ? { ...featureToResult(f), lat, lng } : null
+  })
+}
+
+/** Itinéraire routier via le serveur public OSRM (usage modéré, optionnel) */
+export async function osrmRoute(points: { lat: number; lng: number }[], profile: 'driving' | 'foot' = 'driving'): Promise<{ coords: [number, number][]; km: number; minutes: number } | null> {
+  if (points.length < 2) return null
+  const coords = points.map((p) => `${p.lng},${p.lat}`).join(';')
+  const host = profile === 'foot' ? 'https://routing.openstreetmap.de/routed-foot' : 'https://router.project-osrm.org'
+  const res = await fetch(`${host}/route/v1/${profile === 'foot' ? 'foot' : 'driving'}/${coords}?overview=full&geometries=geojson`)
+  if (!res.ok) throw new Error('Calcul d’itinéraire indisponible')
+  const json = await res.json()
+  const r = json.routes?.[0]
+  if (!r) return null
+  return {
+    coords: (r.geometry.coordinates as [number, number][]).map(([lng, lat]) => [lat, lng]),
+    km: r.distance / 1000,
+    minutes: r.duration / 60,
+  }
+}
+
+/** Distance à vol d'oiseau (km) */
+export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(s))
+}
