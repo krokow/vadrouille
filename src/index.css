@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 45% 97%;        /* sable très clair */
+    --foreground: 200 30% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 30% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 30% 14%;
+    --primary: 195 63% 33%;          /* bleu océan */
+    --primary-foreground: 40 45% 97%;
+    --secondary: 38 40% 90%;         /* sable */
+    --secondary-foreground: 200 30% 18%;
+    --muted: 38 30% 92%;
+    --muted-foreground: 200 12% 40%;
+    --accent: 190 40% 92%;
+    --accent-foreground: 195 63% 25%;
+    --coral: 10 81% 66%;             /* accent corail */
+    --coral-foreground: 0 0% 100%;
+    --sand: 38 52% 84%;
+    --warning: 36 92% 50%;
+    --warning-foreground: 30 60% 15%;
+    --success: 152 52% 38%;
+    --success-foreground: 0 0% 100%;
+    --destructive: 2 70% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 36 25% 85%;
+    --input: 36 25% 80%;
+    --ring: 195 63% 40%;
+    --radius: 0.9rem;
+  }
+  .dark {
+    --background: 205 30% 9%;
+    --foreground: 38 30% 92%;
+    --card: 205 27% 13%;
+    --card-foreground: 38 30% 92%;
+    --popover: 205 27% 13%;
+    --popover-foreground: 38 30% 92%;
+    --primary: 192 55% 55%;
+    --primary-foreground: 205 30% 9%;
+    --secondary: 205 20% 20%;
+    --secondary-foreground: 38 30% 92%;
+    --muted: 205 20% 17%;
+    --muted-foreground: 205 12% 66%;
+    --accent: 200 30% 21%;
+    --accent-foreground: 190 50% 80%;
+    --coral: 10 78% 64%;
+    --coral-foreground: 205 30% 9%;
+    --sand: 35 25% 30%;
+    --warning: 38 92% 56%;
+    --warning-foreground: 30 60% 10%;
+    --success: 152 45% 48%;
+    --success-foreground: 205 30% 9%;
+    --destructive: 2 70% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 205 18% 23%;
+    --input: 205 18% 28%;
+    --ring: 192 55% 55%;
+  }
+  * { @apply border-border; }
+  html { -webkit-tap-highlight-color: transparent; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'tnum' 0;
+  }
+  h1, h2, h3 { @apply font-display tracking-tight; }
+  :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
+}
+
+@layer utilities {
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .paper {
+    background-image: radial-gradient(hsl(var(--sand) / 0.35) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+}
+
+/* Leaflet en mode sombre : on assombrit légèrement les tuiles */
+.dark .leaflet-tile-pane { filter: brightness(0.75) contrast(1.1) saturate(0.85); }
+.leaflet-container { font: inherit; background: hsl(var(--muted)); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+}
