@@ -274,7 +274,7 @@ function Fab() {
   const items = [
     { kind: 'activity' as const, label: 'Activité', icon: CalendarDays, color: 'bg-primary text-primary-foreground' },
     { kind: 'booking' as const, label: 'Réservation', icon: Ticket, color: 'bg-coral text-coral-foreground' },
-    { kind: 'expense' as const, label: 'Dépense', icon: Wallet, color: 'bg-success text-success-foreground' },
+    { kind: 'quick-expense' as const, label: 'Dépense', icon: Wallet, color: 'bg-success text-success-foreground' },
   ]
   return (
     <div className="fixed bottom-20 right-4 z-40 flex flex-col items-end gap-3 lg:bottom-8 lg:right-8 no-print">

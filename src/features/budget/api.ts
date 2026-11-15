@@ -21,7 +21,7 @@ export interface ExpenseInput {
 export function computeShares(input: Pick<ExpenseInput, 'amount' | 'split_mode' | 'split'>): { member_id: string; share_amount: number; weight: number | null }[] {
   const { split } = input
   if (input.split_mode === 'amount') return split.map((s) => ({ member_id: s.member_id, share_amount: s.value ?? 0, weight: null }))
-  if (input.split_mode === 'shares') {
+  if (input.split_mode === 'shares' || input.split_mode === 'percent') {
     const weights = split.map((s) => s.value ?? 1)
     const parts = splitByWeights(input.amount, weights)
     return split.map((s, i) => ({ member_id: s.member_id, share_amount: parts[i], weight: weights[i] }))

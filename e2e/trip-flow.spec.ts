@@ -24,11 +24,11 @@ test('créer un voyage, ajouter une activité à réserver puis une dépense', a
   await page.getByRole('navigation').getByRole('link', { name: 'Planning' }).click()
   await expect(page.getByRole('link', { name: 'Visite du Colisée' })).toBeVisible()
 
-  // dépense
+  // dépense rapide : montant, titre, puis un tap sur la catégorie
   await quickAdd(page, 'Dépense')
-  await page.getByLabel('Titre').fill('Pizzas')
   await page.getByLabel('Montant', { exact: true }).fill('42,50')
-  await page.getByRole('button', { name: 'Ajouter', exact: true }).click()
+  await page.getByLabel('Titre').fill('Pizzas')
+  await page.getByRole('button', { name: /Nourriture/ }).click()
   await page.getByRole('navigation').getByRole('link', { name: 'Budget' }).click()
   await expect(page.getByText('Pizzas')).toBeVisible()
   await expect(page.getByText('42,50 €').first()).toBeVisible()
@@ -56,4 +56,23 @@ test('pas de défilement horizontal à 375 px (voyage d’exemple complet)', asy
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow, `onglet ${tab}`).toBeLessThanOrEqual(0)
   }
+})
+
+test('dépense répartie en pourcentages', async ({ page }) => {
+  await login(page, 'pct@exemple.fr')
+  await createTrip(page, 'Pourcentages')
+  await page.goto(page.url() + '/members')
+  await page.getByLabel('Prénom du participant').fill('Bob')
+  await page.getByRole('button', { name: 'Ajouter', exact: true }).click()
+  await page.getByRole('navigation').getByRole('link', { name: 'Budget' }).click()
+  await page.getByRole('button', { name: 'Dépense rapide' }).click()
+  await page.getByRole('button', { name: /Répartition détaillée/ }).click()
+  await page.getByLabel('Titre').fill('Courses')
+  await page.getByLabel('Montant', { exact: true }).fill('100')
+  await page.getByLabel(/Pourcentage de Pct/).fill('70')
+  await expect(page.getByRole('alert')).toContainText('de trop')
+  await page.getByLabel('Pourcentage de Bob').fill('30')
+  await page.getByRole('button', { name: 'Ajouter', exact: true }).click()
+  await page.getByRole('tab', { name: 'Soldes' }).click()
+  await expect(page.getByText('+30,00 €')).toBeVisible()
 })

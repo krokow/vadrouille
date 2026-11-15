@@ -148,3 +148,13 @@ export function spentPerMember(
   for (const [k, v] of Object.entries(b)) if (k !== '__none__') out[k] = -v
   return out
 }
+
+/** Pourcentages égaux qui totalisent exactement 100 (2 décimales) */
+export function evenPercents(n: number): number[] {
+  return allocateCents(10000, Array(n).fill(1)).map(fromCents)
+}
+
+/** Écart des pourcentages par rapport à 100 (0 = OK) */
+export function percentGap(percents: number[]): number {
+  return fromCents(10000 - percents.reduce((a, b) => a + toCents(b), 0))
+}

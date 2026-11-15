@@ -1,7 +1,7 @@
 import { ScrollRow } from '@/components/ScrollRow'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowRight, Check, Download, Plus, Receipt, Scale, Trash2, Wallet, PieChart as PieIcon, Target } from 'lucide-react'
+import { ArrowLeftRight, Zap, ArrowRight, Check, Download, Plus, Receipt, Scale, Trash2, Wallet, PieChart as PieIcon, Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useTrip } from '@/features/trips/TripContext'
@@ -23,6 +23,11 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ListSkeleton } from '@/components/ui/skeleton'
 import { useConfirm } from '@/components/ui/confirm'
 import { UpdatedBy } from '@/components/UpdatedBy'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useQuery } from '@tanstack/react-query'
+import { fetchRate, cachedRate } from '@/lib/fx'
+import { CurrencyConverter } from './CurrencyConverter'
+import { forecastPerPerson, type ForecastResult } from './forecast'
 import { computeBalances, simplifyDebts, spentPerMember, totalsBy, type Transfer } from './logic'
 import { expensesToCsv } from './csv'
 
@@ -51,6 +56,29 @@ export default function BudgetPage() {
   const perMember = useMemo(() => spentPerMember(list, shares.data ?? []), [list, shares.data])
   const plannedByCat = useMemo(() => Object.fromEntries((budgets.data ?? []).map((b) => [b.category, Number(b.planned_amount)])), [budgets.data])
   const plannedTotal = trip.total_budget ?? Object.values(plannedByCat).reduce((a, b) => a + b, 0)
+
+  const activities = useTripTable(trip.id, 'activities')
+  const bookingsQ = useTripTable(trip.id, 'bookings')
+  const actAtt = useTripTable(trip.id, 'activity_attendees')
+  const bookAtt = useTripTable(trip.id, 'booking_attendees')
+  const foreignCurrencies = useMemo(() => {
+    const set = new Set<string>()
+    for (const b of bookingsQ.data ?? []) if (b.currency && b.currency !== cur && b.price != null) set.add(b.currency)
+    for (const a of activities.data ?? []) if (a.currency && a.currency !== cur && a.est_cost != null) set.add(a.currency)
+    return [...set].sort()
+  }, [bookingsQ.data, activities.data, cur])
+  const ratesQ = useQuery({
+    queryKey: ['rates', cur, foreignCurrencies.join(',')],
+    queryFn: async () => Object.fromEntries(await Promise.all(foreignCurrencies.map(async (c) => [c, await fetchRate(c, cur).catch(() => cachedRate(c, cur)?.rate)] as const))),
+    enabled: foreignCurrencies.length > 0,
+    staleTime: 6 * 60 * 60_000,
+  })
+  const forecast = useMemo(() => forecastPerPerson({
+    memberIds: members.map((m) => m.id), expenses: list, shares: shares.data ?? [], activities: activities.data ?? [], bookings: bookingsQ.data ?? [],
+    activityAttendees: actAtt.data ?? [], bookingAttendees: bookAtt.data ?? [], mainCurrency: cur, rates: ratesQ.data ?? {},
+  }), [members, list, shares.data, activities.data, bookingsQ.data, actAtt.data, bookAtt.data, cur, ratesQ.data])
+  const perPersonAvg = members.length ? (forecast.totalSpent + forecast.totalUpcoming) / members.length : 0
+  const myForecast = me ? forecast.people.find((p) => p.member_id === me.id) : undefined
 
   const exportCsv = () => {
     downloadFile(`depenses-${trip.name.normalize('NFD').replace(/[^\w]+/g, '-').toLowerCase()}.csv`, expensesToCsv(list, shares.data ?? [], members, cur), 'text/csv;charset=utf-8')
@@ -101,11 +129,21 @@ export default function BudgetPage() {
     <div className="space-y-4">
       <PageTitle title="Budget" subtitle={`${list.length} dépense${list.length > 1 ? 's' : ''} · devise ${cur}`}
         action={<div className="flex gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="Convertisseur de devises" title="Convertisseur de devises"><ArrowLeftRight /></Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[min(22rem,calc(100vw-2rem))] p-4">
+              <p className="mb-3 font-bold">Convertisseur express</p>
+              <CurrencyConverter />
+            </PopoverContent>
+          </Popover>
           {list.length > 0 && <Button variant="outline" size="icon" onClick={exportCsv} aria-label="Exporter en CSV" title="Exporter en CSV"><Download /></Button>}
+          {canEdit && <Button variant="outline" aria-label="Dépense rapide" onClick={() => quick({ kind: 'quick-expense' })}><Zap className="text-warning" /> <span className="hidden sm:inline">Rapide</span></Button>}
           {canEdit && <Button onClick={() => quick({ kind: 'expense' })} className="hidden sm:inline-flex"><Plus /> Dépense</Button>}
         </div>} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Total dépensé</p>
           <p className="text-2xl font-bold tabular">{fmtMoney(total, cur)}</p>
@@ -115,6 +153,13 @@ export default function BudgetPage() {
           <p className="text-xs text-muted-foreground">Mon solde</p>
           <p className={`text-2xl font-bold tabular ${myBalance > 0.004 ? 'text-success' : myBalance < -0.004 ? 'text-coral' : ''}`}>{fmtMoney(myBalance, cur)}</p>
           <p className="mt-1 text-xs text-muted-foreground">{myBalance > 0.004 ? 'On te doit de l’argent' : myBalance < -0.004 ? 'Tu dois de l’argent' : 'Tu es à l’équilibre'}</p>
+        </Card>
+        <Card className="col-span-2 p-4 lg:col-span-1">
+          <p className="text-xs text-muted-foreground">Coût estimé par personne</p>
+          <p className="text-2xl font-bold tabular">{fmtMoney(perPersonAvg, cur)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {myForecast ? <>toi : <strong>{fmtMoney(myForecast.total, cur)}</strong> ({fmtMoney(myForecast.spent, cur, { compact: true })} payés + {fmtMoney(myForecast.upcoming, cur, { compact: true })} à venir)</> : 'dépensé + réservations et activités à venir'}
+          </p>
         </Card>
       </div>
 
@@ -279,11 +324,47 @@ export default function BudgetPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="plan">
+        <TabsContent value="plan" className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          <PerPersonCard forecast={forecast} />
           <PlanEditor plannedByCat={plannedByCat} spentByCat={byCategory} total={total} />
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+function PerPersonCard({ forecast }: { forecast: ForecastResult }) {
+  const { trip, memberById } = useTrip()
+  const cur = trip.currency
+  const max = Math.max(1, ...forecast.people.map((p) => p.total))
+  return (
+    <Card>
+      <CardHeader><CardTitle>Budget par personne (en direct)</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        {forecast.people.map((p) => {
+          const m = memberById[p.member_id]
+          return (
+            <div key={p.member_id} className="space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <Avatar name={m?.display_name ?? '?'} color={m?.color ?? '#999'} size="xs" ghost={m?.is_ghost} />
+                <span className="flex-1 truncate font-semibold">{m?.display_name}</span>
+                <span className="font-bold tabular">{fmtMoney(p.total, cur)}</span>
+              </div>
+              <div className="flex h-2.5 overflow-hidden rounded-full bg-muted" title={`${fmtMoney(p.spent, cur)} payés · ${fmtMoney(p.upcoming, cur)} à venir`}>
+                <div className="h-full bg-primary" style={{ width: `${(p.spent / max) * 100}%` }} />
+                <div className="h-full bg-primary/35" style={{ width: `${(p.upcoming / max) * 100}%` }} />
+              </div>
+            </div>
+          )
+        })}
+        <div className="flex flex-wrap gap-4 pt-1 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary" />Sa part des dépenses ({fmtMoney(forecast.totalSpent, cur, { compact: true })})</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary/35" />À venir ({fmtMoney(forecast.totalUpcoming, cur, { compact: true })})</span>
+        </div>
+        <p className="text-xs text-muted-foreground">« À venir » = réservations avec un prix et activités planifiées avec un coût estimé, pas encore saisies en dépense, réparties entre les personnes concernées.</p>
+        {forecast.missingRates.length > 0 && <p className="text-xs text-warning-foreground dark:text-warning">Taux indisponible pour {forecast.missingRates.join(', ')} : ces montants ne sont pas comptés.</p>}
+      </CardContent>
+    </Card>
   )
 }
 

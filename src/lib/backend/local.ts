@@ -16,7 +16,7 @@ const DB_KEY = 'vadrouille-demo-db'
 const FILES_KEY = 'vadrouille-demo-files'
 const USER_KEY = 'vadrouille-demo-user'
 
-const LOGGED: TableName[] = ['activities', 'bookings', 'expenses', 'trip_members', 'settlements', 'comments', 'places', 'budgets', 'checklist_items', 'journal_entries']
+const LOGGED: TableName[] = ['options', 'activities', 'bookings', 'expenses', 'trip_members', 'settlements', 'comments', 'places', 'budgets', 'checklist_items', 'journal_entries']
 
 function load(): DB {
   try {
@@ -82,6 +82,7 @@ export function createLocalBackend(): Backend {
     if (!current) return false
     if (table === 'trips') return !!memberOf(r.id)
     if (table === 'profiles') return true
+    if (table === 'push_subscriptions') return r.user_id === current.id
     if (table === 'documents') return !!memberOf(r.trip_id) && (r.visibility === 'trip' || r.owner_id === current.id)
     return !!memberOf(r.trip_id)
   }
@@ -95,7 +96,8 @@ export function createLocalBackend(): Backend {
       return canEdit(r.id) || deny()
     }
     if (table === 'trip_members') return isOwner(r.trip_id) || (op === 'delete' && r.user_id === current!.id) || deny()
-    if (table === 'comments' || table === 'activity_votes') return !!memberOf(r.trip_id) || deny()
+    if (table === 'push_subscriptions') return r.user_id === current!.id || deny()
+    if (table === 'comments' || table === 'activity_votes' || table === 'option_votes') return !!memberOf(r.trip_id) || deny()
     if (table === 'documents') return (!!memberOf(r.trip_id) && r.owner_id === current!.id) || deny()
     if (table === 'activity_log') return deny()
     return canEdit(r.trip_id) || deny()
@@ -239,6 +241,7 @@ export function createLocalBackend(): Backend {
         expenses: [['expense_shares', 'expense_id']],
         activities: [['activity_links', 'activity_id'], ['activity_votes', 'activity_id'], ['activity_attendees', 'activity_id']],
         bookings: [['booking_attendees', 'booking_id']],
+        options: [['option_votes', 'option_id']],
       }
       for (const [child, fk] of CASCADE[table] ?? []) removeWhere(child, (r) => ids.has(r[fk] as string))
       if (['activities', 'bookings', 'expenses', 'journal_entries'].includes(table)) {
@@ -260,6 +263,19 @@ export function createLocalBackend(): Backend {
     },
     async rpc(fn, args) {
       db = load()
+      if (fn === 'public_trip') {
+        const t = (rows('trips') as unknown as Trip[]).find((x) => x.share_token === args.token && x.share_enabled)
+        if (!t) throw new Error('Ce lien de partage n’est plus valide')
+        const pick = <T extends Row>(list: T[], keys: string[]) => list.map((r) => Object.fromEntries(keys.map((k) => [k, r[k] ?? null])))
+        const of = (table: string) => rows(table).filter((r) => r.trip_id === t.id)
+        return {
+          trip: { id: t.id, name: t.name, destination: t.destination, lat: t.lat, lng: t.lng, start_date: t.start_date, end_date: t.end_date, currency: t.currency },
+          members: pick(of('trip_members'), ['id', 'display_name', 'color']),
+          places: pick(of('places'), ['id', 'name', 'address', 'lat', 'lng']),
+          activities: pick(of('activities'), ['id', 'title', 'description', 'day_date', 'start_time', 'end_time', 'category', 'place_id', 'sort_order']),
+          bookings: pick(of('bookings').filter((b) => b.status !== 'cancelled'), ['id', 'title', 'type', 'start_at', 'end_at', 'status', 'place_id']),
+        } as never
+      }
       if (!current) deny()
       const trip = (rows('trips') as unknown as Trip[]).find((t) => t.invite_token === args.token)
       if (!trip || !trip.invite_enabled) throw new Error("Ce lien d'invitation n'est plus valide")

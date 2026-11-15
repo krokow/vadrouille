@@ -1,6 +1,6 @@
 import { createContext, lazy, Suspense, useCallback, useContext, useState } from 'react'
 
-export type QuickKind = 'activity' | 'booking' | 'expense'
+export type QuickKind = 'activity' | 'booking' | 'expense' | 'quick-expense'
 export interface QuickAddState {
   kind: QuickKind
   /** id d'un élément existant à modifier */
@@ -11,6 +11,7 @@ export interface QuickAddState {
 const ActivityDialog = lazy(() => import('@/features/activities/ActivityDialog'))
 const BookingDialog = lazy(() => import('@/features/bookings/BookingDialog'))
 const ExpenseDialog = lazy(() => import('@/features/budget/ExpenseDialog'))
+const QuickExpenseDialog = lazy(() => import('@/features/budget/QuickExpenseDialog'))
 
 const Ctx = createContext<(s: QuickAddState) => void>(() => undefined)
 
@@ -25,7 +26,8 @@ export function QuickAddProvider({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         {state?.kind === 'activity' && <ActivityDialog id={state.id} defaults={state.defaults} onClose={close} />}
         {state?.kind === 'booking' && <BookingDialog id={state.id} defaults={state.defaults} onClose={close} />}
-        {state?.kind === 'expense' && <ExpenseDialog id={state.id} defaults={state.defaults} onClose={close} />}
+        {state?.kind === 'expense' && <ExpenseDialog key={JSON.stringify(state.defaults ?? {})} id={state.id} defaults={state.defaults} onClose={close} />}
+        {state?.kind === 'quick-expense' && <QuickExpenseDialog onClose={close} />}
       </Suspense>
     </Ctx.Provider>
   )

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  allocateCents, computeBalances, customSplitGap, simplifyDebts, splitByWeights, splitEqual, spentPerMember, toMain,
+  evenPercents, percentGap, allocateCents, computeBalances, customSplitGap, simplifyDebts, splitByWeights, splitEqual, spentPerMember, toMain,
 } from './logic'
 
 describe('répartition', () => {
@@ -28,6 +28,11 @@ describe('répartition', () => {
     expect(customSplitGap(50, [20, 30])).toBe(0)
     expect(customSplitGap(50, [20, 25.5])).toBe(4.5)
     expect(customSplitGap(0.3, [0.1, 0.2])).toBe(0)
+  })
+  it('pourcentages égaux et écart à 100 %', () => {
+    expect(evenPercents(3)).toEqual([33.34, 33.33, 33.33])
+    expect(percentGap(evenPercents(7))).toBe(0)
+    expect(percentGap([50, 30])).toBe(20)
   })
   it('conversion de devise arrondie au centime', () => {
     expect(toMain(100, 0.92345)).toBe(92.35)

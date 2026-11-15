@@ -50,4 +50,4 @@ export interface Backend {
 }
 
 export type Bucket = 'trip-files' | 'avatars'
-export type RpcName = 'join_trip' | 'trip_preview'
+export type RpcName = 'join_trip' | 'trip_preview' | 'public_trip'

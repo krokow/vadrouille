@@ -6,7 +6,7 @@ export type ActivityBookingStatus = 'to_book' | 'booked'
 export type BudgetCategory = 'transport' | 'lodging' | 'food' | 'activities' | 'shopping' | 'other'
 export type BookingType = 'flight' | 'train' | 'bus' | 'car' | 'lodging' | 'restaurant' | 'ticket' | 'other'
 export type ActivityCategory = 'visit' | 'nature' | 'food' | 'culture' | 'sport' | 'nightlife' | 'shopping' | 'relax' | 'other'
-export type ParentType = 'activity' | 'booking' | 'expense' | 'journal'
+export type ParentType = 'activity' | 'booking' | 'expense' | 'journal' | 'album' | 'option'
 
 interface Base {
   id: string
@@ -35,6 +35,8 @@ export interface Trip extends Base {
   invite_enabled: boolean
   total_budget: number | null
   notes: string | null
+  share_token?: string | null
+  share_enabled?: boolean
   created_by: string
 }
 
@@ -144,7 +146,7 @@ export interface Expense extends Base {
   date: string
   category: BudgetCategory
   paid_by: string
-  split_mode: 'equal' | 'amount' | 'shares'
+  split_mode: 'equal' | 'amount' | 'shares' | 'percent'
   booking_id: string | null
   activity_id: string | null
   receipt_path: string | null
@@ -224,6 +226,40 @@ export interface TripDocument extends Base {
   notes: string | null
 }
 
+export interface TripOption extends Base {
+  trip_id: string
+  group_name: string
+  title: string
+  url: string | null
+  price: number | null
+  currency: string | null
+  rating: number | null
+  pros: string | null
+  cons: string | null
+  notes: string | null
+  place_id: string | null
+  chosen: boolean
+  booking_id: string | null
+  sort_order: number
+}
+
+export interface OptionVote extends Base {
+  trip_id: string
+  option_id: string
+  member_id: string
+}
+
+export interface PushSubscriptionRow {
+  id: string
+  user_id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  user_agent: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface TableMap {
   profiles: Profile
   trips: Trip
@@ -245,6 +281,9 @@ export interface TableMap {
   checklist_items: ChecklistItem
   journal_entries: JournalEntry
   documents: TripDocument
+  options: TripOption
+  option_votes: OptionVote
+  push_subscriptions: PushSubscriptionRow
 }
 export type TableName = keyof TableMap
 /** Tables rattachées à un voyage (colonne trip_id) */
@@ -252,5 +291,6 @@ export const TRIP_TABLES = [
   'trip_members', 'places', 'activities', 'activity_links', 'activity_votes', 'activity_attendees',
   'bookings', 'booking_attendees', 'attachments', 'expenses', 'expense_shares', 'settlements',
   'budgets', 'comments', 'activity_log', 'checklist_items', 'journal_entries', 'documents',
+  'options', 'option_votes',
 ] as const satisfies readonly TableName[]
 export type TripTable = (typeof TRIP_TABLES)[number]

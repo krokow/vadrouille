@@ -151,6 +151,38 @@ insert into checklist_items (trip_id, label, kind, due_date) values ('11111111-1
 select pg_temp.check((select count(*) from checklist_items where kind = 'task') = 1, 'préparatifs : tâche créée');
 reset role;
 
+-- lien invité, options, push
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+do $$ begin
+  update trips set share_token = 'pub', share_enabled = true where id = '11111111-1111-1111-1111-111111111111';
+  raise exception 'FAIL: éditeur a activé le lien invité';
+exception when insufficient_privilege then raise notice 'PASS: lien invité réservé à l''organisateur';
+end $$;
+insert into options (trip_id, group_name, title, price) values ('11111111-1111-1111-1111-111111111111', 'Hôtel', 'Hôtel A', 120);
+select pg_temp.check((select count(*) from options) = 1, 'options : éditeur peut proposer une option');
+insert into push_subscriptions (user_id, endpoint, p256dh, auth) values (auth.uid(), 'https://push/bob', 'k', 'a');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+update trips set share_token = 'pub-lisbonne', share_enabled = true where id = '11111111-1111-1111-1111-111111111111';
+select pg_temp.check((select count(*) from push_subscriptions) = 0, 'push : chacun ne voit que ses abonnements');
+reset role;
+set role anon;
+select pg_temp.check((public_trip('pub-lisbonne')->'trip'->>'name') = 'Lisbonne', 'invité sans compte : instantané public lisible');
+select pg_temp.check(not (public_trip('pub-lisbonne')::text like '%confirmation%'), 'invité : pas de numéros de confirmation');
+do $$ begin
+  perform 1 from trips;
+  raise exception 'FAIL: anon lit la table trips';
+exception when insufficient_privilege then raise notice 'PASS: anon ne lit pas les tables directement';
+end $$;
+reset role;
+update trips set share_enabled = false where id = '11111111-1111-1111-1111-111111111111';
+set role anon;
+do $$ begin
+  perform public_trip('pub-lisbonne');
+  raise exception 'FAIL: lien désactivé encore valide';
+exception when no_data_found then raise notice 'PASS: lien invité désactivé refusé';
+end $$;
+reset role;
+
 -- garder un organisateur
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 do $$ begin

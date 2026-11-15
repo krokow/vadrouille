@@ -13,6 +13,12 @@ describe('computeShares', () => {
     expect(r.map((s) => s.share_amount)).toEqual([50, 25, 25])
     expect(r.map((s) => s.weight)).toEqual([2, 1, 1])
   })
+  it('pourcentages : 50 / 30 / 20 sur 99,99 €, somme exacte', () => {
+    const r = computeShares({ amount: 99.99, split_mode: 'percent', split: [{ member_id: 'a', value: 50 }, { member_id: 'b', value: 30 }, { member_id: 'c', value: 20 }] })
+    expect(r.map((x) => x.share_amount)).toEqual([49.99, 30, 20])
+    expect(r.reduce((a, x) => a + Math.round(x.share_amount * 100), 0)).toBe(9999)
+    expect(r.map((x) => x.weight)).toEqual([50, 30, 20])
+  })
   it('montants personnalisés', () => {
     expect(computeShares({ amount: 4, split_mode: 'amount', split }).map((s) => s.share_amount)).toEqual([2, 1, 1])
   })

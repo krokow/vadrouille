@@ -22,7 +22,7 @@ import { Checkbox } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useConfirm } from '@/components/ui/confirm'
 import { cn } from '@/lib/utils'
-import { customSplitGap, toMain } from './logic'
+import { customSplitGap, evenPercents, percentGap, toMain } from './logic'
 import { computeShares, saveExpense } from './api'
 
 const num = (s: string | undefined) => (s ? Number(s.replace(',', '.').replace(/\s/g, '')) : NaN)
@@ -56,13 +56,13 @@ export default function ExpenseDialog({ id, defaults, onClose }: { id?: string; 
   const existing = id ? expenses.data?.find((e) => e.id === id) : undefined
   const existingShares = useMemo(() => (shares.data ?? []).filter((s) => s.expense_id === id), [shares.data, id])
 
-  const [mode, setMode] = useState<Mode>(existing?.split_mode ?? 'equal')
+  const [mode, setMode] = useState<Mode>(existing?.split_mode ?? (defaults?.split_mode as Mode) ?? 'equal')
   const [selected, setSelected] = useState<string[]>(
     existing ? existingShares.map((s) => s.member_id) : ((defaults?.members as string[]) ?? []).length ? (defaults!.members as string[]) : members.map((m) => m.id),
   )
   const [values, setValues] = useState<Record<string, string>>(() => {
     const out: Record<string, string> = {}
-    for (const s of existingShares) out[s.member_id] = String(existing?.split_mode === 'shares' ? s.weight ?? 1 : s.share_amount)
+    for (const s of existingShares) out[s.member_id] = String(existing?.split_mode === 'shares' || existing?.split_mode === 'percent' ? s.weight ?? 1 : s.share_amount)
     return out
   })
   const [receipt, setReceipt] = useState<File | null>(null)
@@ -77,9 +77,9 @@ export default function ExpenseDialog({ id, defaults, onClose }: { id?: string; 
       amount: existing ? String(existing.amount) : defaults?.amount != null ? String(defaults.amount) : '',
       currency: existing?.currency ?? (defaults?.currency as string) ?? trip.currency,
       fx_rate: existing ? String(existing.fx_rate) : '1',
-      date: existing?.date ?? isoDay(),
+      date: existing?.date ?? (defaults?.date as string) ?? isoDay(),
       category: existing?.category ?? (defaults?.category as string) ?? 'food',
-      paid_by: existing?.paid_by ?? me?.id ?? members[0]?.id ?? '',
+      paid_by: existing?.paid_by ?? (defaults?.paid_by as string) ?? me?.id ?? members[0]?.id ?? '',
       booking_id: existing?.booking_id ?? (defaults?.booking_id as string) ?? '',
       activity_id: existing?.activity_id ?? (defaults?.activity_id as string) ?? '',
     },
@@ -111,13 +111,18 @@ export default function ExpenseDialog({ id, defaults, onClose }: { id?: string; 
     }
   }, [currency, date, foreign, trip.currency, existing, form])
 
-  const split = members.filter((m) => selected.includes(m.id)).map((m) => ({ member_id: m.id, value: mode === 'equal' ? undefined : num(values[m.id] ?? (mode === 'shares' ? '1' : '0')) || 0 }))
+  const selectedMembers = members.filter((m) => selected.includes(m.id))
+  const defaultPercents = evenPercents(selectedMembers.length)
+  const defaultValue = (id: string) => (mode === 'shares' ? '1' : mode === 'percent' ? String(defaultPercents[selectedMembers.findIndex((m) => m.id === id)] ?? 0) : '0')
+  const split = selectedMembers.map((m) => ({ member_id: m.id, value: mode === 'equal' ? undefined : num(values[m.id] ?? defaultValue(m.id)) || 0 }))
+  const pGap = mode === 'percent' ? percentGap(split.map((s) => s.value ?? 0)) : 0
   const preview = !Number.isNaN(amount) && split.length ? computeShares({ amount, split_mode: mode, split }) : []
   const gap = mode === 'amount' && !Number.isNaN(amount) ? customSplitGap(amount, split.map((s) => s.value ?? 0)) : 0
 
   const submit = async (v: Values) => {
     if (!selected.length) return toast.error('Choisis au moins une personne pour la répartition')
     if (mode === 'amount' && gap !== 0) return toast.error(`La répartition ne tombe pas juste (écart ${fmtMoney(gap, v.currency)})`)
+    if (mode === 'percent' && pGap !== 0) return toast.error(`Les pourcentages doivent totaliser 100 % (écart ${pGap} %)`)
     try {
       let receipt_path = removeReceipt ? null : existing?.receipt_path ?? null
       if (receipt) {
@@ -198,11 +203,12 @@ export default function ExpenseDialog({ id, defaults, onClose }: { id?: string; 
                   {selected.length === members.length ? 'Personne' : 'Tout le monde'}
                 </button>
               </div>
-              <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
+              <Tabs value={mode} onValueChange={(v) => { setMode(v as Mode); setValues({}) }}>
                 <TabsList className="w-full">
-                  <TabsTrigger value="equal">Parts égales</TabsTrigger>
-                  <TabsTrigger value="shares">Par parts</TabsTrigger>
-                  <TabsTrigger value="amount">Montants</TabsTrigger>
+                  <TabsTrigger value="equal" className="px-2">Égal</TabsTrigger>
+                  <TabsTrigger value="percent" className="px-2">%</TabsTrigger>
+                  <TabsTrigger value="shares" className="px-2">Parts</TabsTrigger>
+                  <TabsTrigger value="amount" className="px-2">Montants</TabsTrigger>
                 </TabsList>
               </Tabs>
               <ul className="divide-y rounded-2xl border bg-card">
@@ -215,9 +221,13 @@ export default function ExpenseDialog({ id, defaults, onClose }: { id?: string; 
                       <Avatar name={m.display_name} color={m.color} size="xs" ghost={m.is_ghost} />
                       <label htmlFor={`sp-${m.id}`} className="min-w-0 flex-1 truncate text-sm font-semibold">{m.display_name}</label>
                       {on && mode !== 'equal' && (
-                        <Input className="h-9 w-20 text-right" inputMode="decimal" aria-label={mode === 'shares' ? `Parts de ${m.display_name}` : `Montant de ${m.display_name}`}
-                          value={values[m.id] ?? (mode === 'shares' ? '1' : '')} placeholder={mode === 'shares' ? '1' : '0'}
-                          onChange={(e) => setValues({ ...values, [m.id]: e.target.value })} />
+                        <span className="relative">
+                          <Input className={cn('h-9 w-20 text-right', mode === 'percent' && 'pr-6')} inputMode="decimal"
+                            aria-label={mode === 'shares' ? `Parts de ${m.display_name}` : mode === 'percent' ? `Pourcentage de ${m.display_name}` : `Montant de ${m.display_name}`}
+                            value={values[m.id] ?? (mode === 'amount' ? '' : defaultValue(m.id))} placeholder={mode === 'shares' ? '1' : '0'}
+                            onChange={(e) => setValues({ ...values, [m.id]: e.target.value })} />
+                          {mode === 'percent' && <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>}
+                        </span>
                       )}
                       <span className="w-20 text-right text-sm tabular text-muted-foreground">{on && share ? fmtMoney(share.share_amount, currency) : '—'}</span>
                     </li>
@@ -226,6 +236,9 @@ export default function ExpenseDialog({ id, defaults, onClose }: { id?: string; 
               </ul>
               {mode === 'amount' && gap !== 0 && <p className="text-xs font-semibold text-destructive" role="alert">{gap > 0 ? `Il reste ${fmtMoney(gap, currency)} à répartir` : `${fmtMoney(-gap, currency)} de trop`}</p>}
               {mode === 'shares' && <p className="text-xs text-muted-foreground">Ex. 2 parts pour un adulte, 1 pour un enfant.</p>}
+              {mode === 'percent' && (pGap !== 0
+                ? <p className="text-xs font-semibold text-destructive" role="alert">{pGap > 0 ? `Il reste ${pGap} % à répartir` : `${-pGap} % de trop`}</p>
+                : <p className="text-xs text-muted-foreground">Total : 100 % ✓ — ex. 60 % / 40 % pour un couple qui ne consomme pas pareil.</p>)}
             </div>
 
             <div className="space-y-1.5">
