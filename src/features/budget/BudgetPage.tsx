@@ -1,3 +1,4 @@
+import { ScrollRow } from '@/components/ScrollRow'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ArrowRight, Check, Download, Plus, Receipt, Scale, Trash2, Wallet, PieChart as PieIcon, Target } from 'lucide-react'
@@ -133,12 +134,12 @@ export default function BudgetPage() {
             </NativeSelect>
           )}
           {list.length > 0 && (
-            <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4">
+            <ScrollRow>
               <Chip active={catFilter === 'all'} onClick={() => setCatFilter('all')}>Tout</Chip>
               {(Object.keys(BUDGET_CATEGORIES) as BudgetCategory[]).filter((c) => byCategory[c]).map((c) => (
                 <Chip key={c} active={catFilter === c} onClick={() => setCatFilter(c)}>{BUDGET_CATEGORIES[c].emoji} {BUDGET_CATEGORIES[c].label}</Chip>
               ))}
-            </div>
+            </ScrollRow>
           )}
           {!list.length ? (
             <EmptyState icon={Wallet} title="Aucune dépense" description="Ajoute les dépenses au fil du voyage : on calcule qui doit combien à qui."

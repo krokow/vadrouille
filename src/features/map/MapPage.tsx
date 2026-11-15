@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import L from 'leaflet'
 import { MapContainer, Marker, Polyline, Popup, TileLayer, Circle, useMap, useMapEvents } from 'react-leaflet'
 import { useQuery } from '@tanstack/react-query'
-import { Bike, Car, ChevronDown, Crosshair, Footprints, Layers, Loader2, LocateFixed, Maximize, Plus, Route, Settings2, X } from 'lucide-react'
+import { Bike, Car, ChevronDown, ChevronLeft, ChevronRight, Crosshair, Footprints, Layers, Loader2, LocateFixed, Maximize, Plus, Route, Settings2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTrip } from '@/features/trips/TripContext'
 import { useQuickAdd } from '@/features/trips/QuickAdd'
@@ -15,6 +15,7 @@ import { osrmRoute, reverseGeocode, haversineKm, type GeoResult, type RouteMode 
 import { useTheme } from '@/app/theme'
 import { useMediaQuery } from '@/lib/hooks'
 import { PlaceSearch } from '@/components/PlaceSearch'
+import { ScrollRow } from '@/components/ScrollRow'
 import { MapLinks } from '@/components/MapLinks'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -301,7 +302,7 @@ export default function MapPage() {
   return (
     <div className="flex h-[calc(100dvh-57px-64px)] flex-col lg:h-dvh">
       {/* barre de recherche et filtres */}
-      <div className="z-10 space-y-2 border-b bg-background/95 p-3 backdrop-blur">
+      <div className="relative z-20 space-y-2 border-b bg-background/95 p-3 backdrop-blur">
         <div className="flex gap-2">
           <PlaceSearch near={center} onSelect={(r) => setCandidate(r)} placeholder="Chercher un lieu à ajouter…" className="flex-1" />
           <Popover>
@@ -325,24 +326,20 @@ export default function MapPage() {
             </PopoverContent>
           </Popover>
         </div>
-        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5">
-          <Chip active={day === 'all'} onClick={() => setDay('all')}>Vue d’ensemble</Chip>
-          {days.map((d, i) => (
-            <Chip key={d} active={day === d} onClick={() => setDay(d)} color={DAY_COLORS[i % DAY_COLORS.length]}>J{i + 1} · {fmtDay(d)}</Chip>
-          ))}
-          <Chip active={day === 'none'} onClick={() => setDay('none')}>💡 Non planifiés</Chip>
-        </div>
-        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3">
-          {(Object.entries(POINT_KINDS) as [PointKind, (typeof POINT_KINDS)[PointKind]][]).map(([k, v]) => (
-            <button key={k} onClick={() => toggleKind(k)} aria-pressed={kinds.has(k)}
-              className={cn('flex shrink-0 items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs font-semibold transition-opacity', !kinds.has(k) && 'opacity-40')}>
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: v.color }} /> {v.label}
-            </button>
-          ))}
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <DayPicker days={days} value={day} onChange={setDay} />
+          <ScrollRow className="lg:ml-auto">
+            {(Object.entries(POINT_KINDS) as [PointKind, (typeof POINT_KINDS)[PointKind]][]).map(([k, v]) => (
+              <button key={k} onClick={() => toggleKind(k)} aria-pressed={kinds.has(k)}
+                className={cn('flex shrink-0 items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs font-semibold transition-opacity', !kinds.has(k) && 'opacity-40')}>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: v.color }} /> {v.label}
+              </button>
+            ))}
+          </ScrollRow>
         </div>
       </div>
 
-      <div className="relative flex min-h-0 flex-1">
+      <div className="relative isolate flex min-h-0 flex-1">
         <div className="relative min-w-0 flex-1">
           <MapContainer center={fallback ?? [46.6, 2.4]} zoom={fallback ? 12 : 5} className="h-full w-full" zoomControl={false}>
             <TileLayer key={tile.url} url={tile.url} attribution={tile.attribution} maxZoom={tile.maxZoom} 
@@ -419,13 +416,13 @@ export default function MapPage() {
             </div>
           )}
           {!visible.length && !places.isLoading && (
-            <div className="pointer-events-none absolute inset-x-6 top-16 z-[400] rounded-2xl bg-background/95 p-3 text-center text-sm shadow-lg">
+            <div className="pointer-events-none absolute left-3 right-16 top-3 z-[400] sm:left-1/2 sm:right-auto sm:w-[22rem] sm:-translate-x-1/2 rounded-2xl border bg-background/95 p-3 text-center text-sm shadow-lg">
               <p className="font-semibold">Aucun lieu à afficher</p>
               <p className="text-xs text-muted-foreground">Cherche un lieu ci-dessus{canEdit ? ' ou fais un appui long / clic droit sur la carte' : ''} pour l’ajouter.</p>
             </div>
           )}
           {singleDay && stops.length < 2 && visible.length > 0 && (
-            <div className="pointer-events-none absolute inset-x-6 top-16 z-[400] rounded-2xl bg-background/95 p-3 text-center text-xs shadow-lg">
+            <div className="pointer-events-none absolute left-3 right-16 top-3 z-[400] sm:left-1/2 sm:right-auto sm:w-[22rem] sm:-translate-x-1/2 rounded-2xl border bg-background/95 p-3 text-center text-xs shadow-lg">
               Ajoute au moins deux activités avec un lieu ce jour-là pour voir le trajet.
             </div>
           )}
@@ -468,13 +465,43 @@ function TileChooser({ value, onChange }: { value: TileKey; onChange: (k: TileKe
   )
 }
 
-function Chip({ active, onClick, children, color }: { active: boolean; onClick: () => void; children: React.ReactNode; color?: string }) {
+/** Sélecteur de jour compact : vue d'ensemble · ◀ J3 · lun. 3 mai ▶ · non planifiés */
+function DayPicker({ days, value, onChange }: { days: string[]; value: string; onChange: (d: string) => void }) {
+  const idx = days.indexOf(value)
+  const isDay = idx >= 0
+  const color = isDay ? DAY_COLORS[idx % DAY_COLORS.length] : undefined
+  const go = (delta: number) => {
+    const next = isDay ? idx + delta : delta > 0 ? 0 : days.length - 1
+    if (days[next]) onChange(days[next])
+  }
+  const seg = 'flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors'
   return (
-    <button onClick={onClick} aria-pressed={active}
-      className={cn('flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold', active ? 'border-primary bg-primary text-primary-foreground' : 'bg-card')}>
-      {color && <span className="h-2 w-2 rounded-full ring-1 ring-white/60" style={{ backgroundColor: color }} />}
-      {children}
-    </button>
+    <div className="flex min-w-0 items-center gap-1.5">
+      <button onClick={() => onChange('all')} aria-pressed={value === 'all'} className={cn(seg, value === 'all' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card hover:bg-accent')}>
+        Vue d’ensemble
+      </button>
+      {days.length > 0 && (
+        <div className={cn('flex h-9 min-w-0 items-center rounded-full border', isDay ? 'border-primary bg-primary/10' : 'bg-card')}>
+          <button onClick={() => go(-1)} disabled={isDay && idx === 0} aria-label="Jour précédent" className="flex h-full w-8 shrink-0 items-center justify-center rounded-l-full hover:bg-accent disabled:opacity-30">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="relative flex min-w-0 items-center">
+            {color && <span className="pointer-events-none absolute left-1 h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />}
+            <select value={isDay ? value : ''} onChange={(e) => e.target.value && onChange(e.target.value)} aria-label="Choisir un jour"
+              className={cn('h-full min-w-0 cursor-pointer appearance-none truncate bg-transparent py-1 pr-1 text-xs font-semibold outline-none', color ? 'pl-5' : 'pl-1', isDay ? 'text-primary' : 'text-muted-foreground')}>
+              {!isDay && <option value="">Choisir un jour…</option>}
+              {days.map((d, i) => <option key={d} value={d}>J{i + 1} · {fmtDay(d)}</option>)}
+            </select>
+          </span>
+          <button onClick={() => go(1)} disabled={isDay && idx === days.length - 1} aria-label="Jour suivant" className="flex h-full w-8 shrink-0 items-center justify-center rounded-r-full hover:bg-accent disabled:opacity-30">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+      <button onClick={() => onChange('none')} aria-pressed={value === 'none'} title="Lieux non planifiés" className={cn(seg, value === 'none' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card hover:bg-accent')}>
+        💡<span className="hidden sm:inline">Non planifiés</span>
+      </button>
+    </div>
   )
 }
 

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ListSkeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { ScrollRow } from '@/components/ScrollRow'
 import { BookingCard } from './BookingCard'
 
 type Filter = 'all' | 'to_book' | BookingType
@@ -56,11 +57,11 @@ export default function BookingsPage() {
         action={canEdit && <Button onClick={() => quick({ kind: 'booking' })} className="hidden sm:inline-flex"><Plus /> Réservation</Button>}
       />
       {!!bookings.data?.length && (
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4">
+        <ScrollRow>
           <FilterChip active={filter === 'all'} onClick={() => setFilter('all')}>Tout</FilterChip>
           {toBook > 0 && <FilterChip active={filter === 'to_book'} onClick={() => setFilter('to_book')}>⏳ À réserver</FilterChip>}
           {types.map((t) => <FilterChip key={t} active={filter === t} onClick={() => setFilter(t)}>{BOOKING_TYPES[t].emoji} {BOOKING_TYPES[t].label}</FilterChip>)}
-        </div>
+        </ScrollRow>
       )}
       {!bookings.data?.length ? (
         <EmptyState icon={Ticket} title="Aucune réservation" description="Vols, trains, logements, restos, billets : centralise tout ici avec les numéros de confirmation et les PDF."

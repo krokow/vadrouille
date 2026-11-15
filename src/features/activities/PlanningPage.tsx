@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ListSkeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { ScrollRow } from '@/components/ScrollRow'
 import type { Activity } from '@/lib/types'
 import { ActivityCard, DragHandle } from './ActivityCard'
 import { useActivityData } from './useActivityData'
@@ -186,7 +187,7 @@ export default function PlanningPage() {
   )
 
   return (
-    <div className="space-y-4">
+    <div className={cn('space-y-4', !columns && 'mx-auto max-w-4xl')}>
       <PageTitle
         title="Planning"
         subtitle={days.length ? `${days.length} jour${days.length > 1 ? 's' : ''} · ${data.activities.length} activité${data.activities.length > 1 ? 's' : ''}` : 'Ajoute des dates au voyage pour planifier jour par jour'}
@@ -213,8 +214,8 @@ export default function PlanningPage() {
       />
 
       {days.length > 1 && !columns && (
-        <div className="sticky top-[57px] z-20 -mx-4 overflow-x-auto bg-background/90 px-4 py-2 backdrop-blur lg:top-0">
-          <div className="flex gap-2">
+        <div className="sticky top-[57px] z-20 -mx-4 bg-background/90 px-4 py-2 backdrop-blur lg:top-0">
+          <ScrollRow innerClassName="gap-2">
             {visibleDays.map((d) => (
               <button key={d} onClick={() => scrollTo(d)}
                 className={cn('shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold', d === today ? 'border-coral bg-coral text-coral-foreground' : 'bg-card')}>
@@ -222,7 +223,7 @@ export default function PlanningPage() {
               </button>
             ))}
             <button onClick={() => scrollTo(IDEAS)} className="shrink-0 rounded-full border bg-card px-3 py-1.5 text-xs font-semibold">💡 Idées</button>
-          </div>
+          </ScrollRow>
         </div>
       )}
 
@@ -233,7 +234,7 @@ export default function PlanningPage() {
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => { setActiveId(null); setItems(derived.map) }}>
         {columns ? (
-          <div className="-mx-10 flex gap-4 overflow-x-auto px-10 pb-4 2xl:-mx-14 2xl:px-14 [scrollbar-width:thin]">
+          <div className="-mx-10 flex gap-4 overflow-x-auto px-10 pb-4 2xl:-mx-14 2xl:px-14 thin-scrollbar">
             {visibleDays.map((d) => (
               <section key={d} id={`day-${d}`} className="flex w-80 shrink-0 flex-col rounded-3xl bg-muted/40 p-3" aria-labelledby={`h-${d}`}>
                 {dayHeader(d, days.indexOf(d))}
@@ -247,7 +248,7 @@ export default function PlanningPage() {
             {ideasBlock}
           </div>
         ) : (
-          <div className="mx-auto max-w-3xl space-y-4">
+          <div className="space-y-4">
             {visibleDays.map((d) => (
               <section key={d} id={`day-${d}`} className="scroll-mt-28" aria-labelledby={`h-${d}`}>
                 {dayHeader(d, days.indexOf(d))}

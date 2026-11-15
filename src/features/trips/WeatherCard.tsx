@@ -25,7 +25,7 @@ export function WeatherCard({ trip, compact }: { trip: Trip; compact?: boolean }
 
   if (compact) {
     return (
-      <Card className="flex items-center gap-3 overflow-x-auto p-3">
+      <Card className="no-scrollbar flex items-center gap-3 overflow-x-auto p-3">
         <div className="flex shrink-0 items-center gap-2 pr-2">
           <span className="text-3xl">{now.icon}</span>
           <div>

@@ -80,7 +80,7 @@ export default function DashboardPage() {
         </div>
       </TripCover>
 
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-5 sm:px-0">
+      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-5 sm:px-0">
         {stats.map((s) => (
           <Link key={s.label} to={s.to} className="min-w-[6.5rem] shrink-0 rounded-2xl border bg-card px-4 py-3 shadow-sm transition-colors hover:bg-accent/50">
             <p className={`text-2xl font-extrabold tabular ${s.alert ? 'text-coral' : ''}`}>{s.value}</p>
