@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useParams, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   ArrowLeft, Home, CalendarDays, Map as MapIcon, Ticket, Wallet, Plus, MoreHorizontal, BellRing, Users,
-  History, Settings, ListChecks, BookOpen, FileLock2, WifiOff, X, Printer, CalendarPlus, Receipt, MapPin, Eye,
+  History, Settings, ListChecks, BookOpen, FileLock2, Sun, WifiOff, X, Printer, CalendarPlus, Receipt, MapPin, Eye,
 } from 'lucide-react'
 import { useTrips, useTripTable } from '@/lib/data'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -33,6 +33,7 @@ const TABS = [
 ] as const
 
 const MORE = [
+  { to: 'today', label: 'Jour J', icon: Sun },
   { to: 'todo', label: 'À réserver', icon: BellRing },
   { to: 'members', label: 'Participants', icon: Users },
   { to: 'checklist', label: 'Préparatifs', icon: ListChecks },

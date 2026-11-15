@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, BellRing, CalendarDays, MapPin, Ticket, Users, Wallet, Map as MapIcon } from 'lucide-react'
+import { Sun, ArrowRight, BellRing, CalendarDays, MapPin, Ticket, Users, Wallet, Map as MapIcon } from 'lucide-react'
 import { useTrip } from './TripContext'
 import { TripCover } from './TripCover'
 import { WeatherCard } from './WeatherCard'
@@ -79,6 +79,17 @@ export default function DashboardPage() {
           </p>
         </div>
       </TripCover>
+
+      {phase === 'ongoing' && (
+        <Link to={`${base}/today`} className="flex items-center gap-3 rounded-3xl bg-gradient-to-r from-coral to-warning p-4 text-white shadow-md transition-transform active:scale-[0.99]">
+          <Sun className="h-8 w-8 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-extrabold">C’est le jour J{tripDays(trip.start_date, trip.end_date).indexOf(isoDay()) + 1} !</span>
+            <span className="block text-sm opacity-90">Programme du jour, prochaine étape, itinéraire et billets</span>
+          </span>
+          <ArrowRight className="h-5 w-5" />
+        </Link>
+      )}
 
       <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-5 sm:px-0">
         {stats.map((s) => (

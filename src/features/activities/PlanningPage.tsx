@@ -5,7 +5,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { CalendarDays, CheckCircle2, Columns3, Copy, EyeOff, Lightbulb, List, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarRange, CalendarDays, CheckCircle2, Columns3, Copy, EyeOff, Lightbulb, List, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMediaQuery } from '@/lib/hooks'
 import { useConfirm } from '@/components/ui/confirm'
@@ -27,16 +27,18 @@ import type { Activity } from '@/lib/types'
 import { ActivityCard, DragHandle } from './ActivityCard'
 import { useActivityData } from './useActivityData'
 import { sortDay } from './logic'
+import { CalendarView } from './CalendarView'
 
 const IDEAS = 'ideas'
+type View = 'list' | 'columns' | 'calendar'
 
 export default function PlanningPage() {
   const { trip, canEdit, members, writer } = useTrip()
   const quick = useQuickAdd()
   const data = useActivityData()
   const desktop = useMediaQuery('(min-width: 1024px)')
-  const [view, setViewState] = useState<'list' | 'columns'>(() => (localStorage.getItem('vadrouille-planning-view') as 'list' | 'columns') ?? 'columns')
-  const setView = (v: 'list' | 'columns') => {
+  const [view, setViewState] = useState<View>(() => (localStorage.getItem('vadrouille-planning-view') as View) ?? 'columns')
+  const setView = (v: View) => {
     setViewState(v)
     try { localStorage.setItem('vadrouille-planning-view', v) } catch { /* ignore */ }
   }
@@ -129,6 +131,7 @@ export default function PlanningPage() {
   if (data.loading) return <ListSkeleton rows={5} />
 
   const columns = view === 'columns' && desktop
+  const calendar = view === 'calendar' && days.length > 0
   const visibleDays = hideEmpty ? days.filter((d) => items[d]?.length) : days
 
   const card = (id: string, sortable: boolean) => {
@@ -187,23 +190,23 @@ export default function PlanningPage() {
   )
 
   return (
-    <div className={cn('space-y-4', !columns && 'mx-auto max-w-4xl')}>
+    <div className={cn('space-y-4', !columns && !calendar && 'mx-auto max-w-4xl')}>
       <PageTitle
         title="Planning"
         subtitle={days.length ? `${days.length} jour${days.length > 1 ? 's' : ''} · ${data.activities.length} activité${data.activities.length > 1 ? 's' : ''}` : 'Ajoute des dates au voyage pour planifier jour par jour'}
         action={
           <div className="flex items-center gap-2">
-            {desktop && days.length > 0 && (
+            {days.length > 0 && (
               <div className="flex rounded-full bg-muted p-1" role="radiogroup" aria-label="Affichage">
-                {([['list', List, 'Liste'], ['columns', Columns3, 'Colonnes']] as const).map(([k, Icon, label]) => (
+                {([['list', List, 'Liste'], ['columns', Columns3, 'Colonnes'], ['calendar', CalendarRange, 'Calendrier']] as const).filter(([k]) => desktop || k !== 'columns').map(([k, Icon, label]) => (
                   <button key={k} role="radio" aria-checked={view === k} onClick={() => setView(k)}
                     className={cn('flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold', view === k ? 'bg-card shadow-sm' : 'text-muted-foreground')}>
-                    <Icon className="h-4 w-4" /> {label}
+                    <Icon className="h-4 w-4" /> <span className={cn(!desktop && 'sr-only')}>{label}</span>
                   </button>
                 ))}
               </div>
             )}
-            {days.length > 0 && (
+            {days.length > 0 && !calendar && (
               <Button variant={hideEmpty ? 'secondary' : 'ghost'} size="sm" onClick={() => setHideEmpty(!hideEmpty)} aria-pressed={hideEmpty} title="Masquer les jours sans activité">
                 <EyeOff /> <span className="hidden sm:inline">Jours vides</span>
               </Button>
@@ -213,7 +216,9 @@ export default function PlanningPage() {
         }
       />
 
-      {days.length > 1 && !columns && (
+      {calendar && <CalendarView days={days} />}
+
+      {days.length > 1 && !columns && !calendar && (
         <div className="sticky top-[57px] z-20 -mx-4 bg-background/90 px-4 py-2 backdrop-blur lg:top-0">
           <ScrollRow innerClassName="gap-2">
             {visibleDays.map((d) => (
@@ -227,12 +232,12 @@ export default function PlanningPage() {
         </div>
       )}
 
-      {!data.activities.length && (
+      {!data.activities.length && !calendar && (
         <EmptyState icon={CalendarDays} title="Le carnet est vide" description="Ajoute des activités à un jour précis ou dans la liste d’idées, puis votez pour vos préférées."
           action={canEdit && <Button onClick={() => quick({ kind: 'activity' })}><Plus /> Première activité</Button>} />
       )}
 
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => { setActiveId(null); setItems(derived.map) }}>
+      {!calendar && <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => { setActiveId(null); setItems(derived.map) }}>
         {columns ? (
           <div className="-mx-10 flex gap-4 overflow-x-auto px-10 pb-4 2xl:-mx-14 2xl:px-14 thin-scrollbar">
             {visibleDays.map((d) => (
@@ -268,7 +273,7 @@ export default function PlanningPage() {
             <ActivityCard activity={derived.byId[activeId]} place={data.placeById[derived.byId[activeId].place_id ?? '']} className="w-80 rotate-1 shadow-xl ring-2 ring-primary" compact={columns} />
           ) : null}
         </DragOverlay>
-      </DndContext>
+      </DndContext>}
     </div>
   )
 }
