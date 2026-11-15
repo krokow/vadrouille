@@ -79,6 +79,11 @@ begin
   insert into checklist_items (trip_id, label, group_name, sort_order) values
     (t, 'Passeport / carte d’identité', 'Papiers', 1), (t, 'Carte européenne d’assurance maladie', 'Papiers', 2),
     (t, 'Chargeur + batterie externe', 'Électronique', 3), (t, 'Crème solaire', 'Trousse', 4), (t, 'Chaussures de marche', 'Vêtements', 5);
+  insert into checklist_items (trip_id, kind, label, group_name, due_date, done, sort_order) values
+    (t, 'task', 'Souscrire une assurance voyage', 'Tâches', d0 - 30, true, 10),
+    (t, 'task', 'Vérifier la validité des cartes d’identité', 'Tâches', d0 - 14, false, 11),
+    (t, 'task', 'Télécharger la carte de Lisbonne hors ligne', 'Tâches', d0 - 3, false, 12),
+    (t, 'task', 'Enregistrement en ligne du vol', 'Tâches', d0 - 1, false, 13);
 
   return t;
 end $$;

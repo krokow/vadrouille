@@ -69,6 +69,12 @@ export async function createSampleTrip(userId: string): Promise<string> {
     { trip_id: t, expense_id: e2, member_id: kid, share_amount: 173.33, weight: null },
   ])
   await backend.insert('budgets', (['transport', 'lodging', 'food', 'activities', 'shopping'] as const).map((category, i) => ({ trip_id: t, category, planned_amount: [450, 550, 450, 250, 100][i] })))
-  await backend.insert('checklist_items', ['Passeport / carte d’identité', 'Chargeur + batterie externe', 'Crème solaire', 'Chaussures de marche'].map((label, i) => ({ trip_id: t, label, group_name: i === 0 ? 'Papiers' : 'Affaires', sort_order: i + 1, done: false, assigned_to: null })))
+  await backend.insert('checklist_items', ['Passeport / carte d’identité', 'Chargeur + batterie externe', 'Crème solaire', 'Chaussures de marche'].map((label, i) => ({ trip_id: t, kind: 'pack' as const, label, group_name: i === 0 ? 'Papiers' : 'Affaires', sort_order: i + 1, done: false, assigned_to: null })))
+  await backend.insert('checklist_items', [
+    { label: 'Souscrire une assurance voyage', before: 30, done: true },
+    { label: 'Vérifier la validité des cartes d’identité', before: 14, done: false },
+    { label: 'Télécharger la carte de Lisbonne hors ligne', before: 3, done: false },
+    { label: 'Enregistrement en ligne du vol', before: 1, done: false },
+  ].map((x, i) => ({ trip_id: t, kind: 'task' as const, label: x.label, group_name: 'Tâches', due_date: day(-x.before), done: x.done, assigned_to: i === 3 ? me?.id ?? null : null, sort_order: 10 + i })))
   return t
 }

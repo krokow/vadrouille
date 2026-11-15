@@ -1,8 +1,8 @@
-import type { Activity, Booking } from '@/lib/types'
+import type { Activity, Booking, ChecklistItem } from '@/lib/types'
 import { compareByUrgency, deadlineUrgency, type Urgency } from '@/lib/dates'
 
 export interface TodoItem {
-  kind: 'activity' | 'booking'
+  kind: 'activity' | 'booking' | 'task'
   id: string
   title: string
   deadline: string | null
@@ -15,8 +15,13 @@ export interface TodoItem {
  * Tout ce qui reste à réserver : activités « à réserver » + réservations au statut « à réserver ».
  * Sans date limite explicite, on prend la date de l'activité elle-même comme échéance.
  */
-export function buildTodo(activities: Activity[], bookings: Booking[], today: Date = new Date()): TodoItem[] {
+export function buildTodo(activities: Activity[], bookings: Booking[], today: Date = new Date(), tasks: ChecklistItem[] = []): TodoItem[] {
   const items: TodoItem[] = []
+  for (const t of tasks) {
+    if (t.kind !== 'task' || t.done) continue
+    const deadline = t.due_date ?? null
+    items.push({ kind: 'task', id: t.id, title: t.label, deadline, when: null, urgency: deadlineUrgency(deadline, today) })
+  }
   for (const a of activities) {
     if (!a.needs_booking || a.booking_status === 'booked') continue
     const deadline = a.booking_deadline ?? a.day_date

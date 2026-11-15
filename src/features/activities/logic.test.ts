@@ -29,6 +29,15 @@ describe('onglet À réserver', () => {
     expect(todo.map((t) => t.title)).toEqual(['En retard', 'Alhambra', 'Hôtel', 'Musée'])
     expect(todo.map((t) => t.urgency)).toEqual(['overdue', 'soon', 'soon', 'later'])
   })
+  it('les tâches d’avant départ non faites sont incluses quand on les fournit', () => {
+    const tasks = [
+      { id: 't1', label: 'Assurance', kind: 'task', done: false, due_date: '2025-05-09' },
+      { id: 't2', label: 'Fait', kind: 'task', done: true, due_date: '2025-05-09' },
+      { id: 't3', label: 'Crème', kind: 'pack', done: false, due_date: null },
+    ] as never
+    const todo = buildTodo([], [], today, tasks)
+    expect(todo.map((t) => [t.kind, t.title, t.urgency])).toEqual([['task', 'Assurance', 'overdue']])
+  })
   it('sans deadline : la date de l’activité sert d’échéance', () => {
     const [t] = buildTodo([act({ title: 'Resto', needs_booking: true, booking_status: 'to_book', day_date: '2025-05-11' })], [], today)
     expect(t.deadline).toBe('2025-05-11')

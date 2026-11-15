@@ -1,29 +1,44 @@
-/** Fonds de carte gratuits et sans clé (attributions obligatoires affichées par Leaflet) */
+/**
+ * Fonds de carte.
+ * - CARTO (Voyager, Positron, Dark Matter) : clé gratuite obligatoire depuis septembre 2026
+ *   → VITE_CARTO_API_KEY (clé publique destinée au navigateur, cf. carto.com/basemaps/apikey).
+ * - Sans clé : OpenStreetMap et Esri (satellite), gratuits et sans clé.
+ */
 export interface TileStyle {
   label: string
   url: string
   attribution: string
   subdomains?: string
   maxZoom: number
-  dark?: boolean
+  dim?: boolean
 }
 
 const OSM = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 const CARTO = `${OSM} &copy; <a href="https://carto.com/attributions">CARTO</a>`
+export const CARTO_KEY = (import.meta.env.VITE_CARTO_API_KEY as string | undefined)?.trim() || ''
 
-export const TILE_STYLES = {
-  voyager: { label: 'Voyager', url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attribution: CARTO, subdomains: 'abcd', maxZoom: 20 },
-  light: { label: 'Clair', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attribution: CARTO, subdomains: 'abcd', maxZoom: 20 },
-  dark: { label: 'Sombre', url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: CARTO, subdomains: 'abcd', maxZoom: 20, dark: true },
-  satellite: { label: 'Satellite', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: 'Imagerie &copy; Esri, Maxar, Earthstar Geographics', maxZoom: 19, dark: true },
-  osm: { label: 'OSM classique', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM, maxZoom: 19 },
-} satisfies Record<string, TileStyle>
+const carto = (path: string, label: string): TileStyle => ({
+  label,
+  url: `https://basemaps.cartocdn.com/${path}/{z}/{x}/{y}.png?key=${encodeURIComponent(CARTO_KEY)}`,
+  attribution: CARTO,
+  maxZoom: 20,
+})
 
-export type TileKey = keyof typeof TILE_STYLES | 'auto'
+export const TILE_STYLES: Record<string, TileStyle> = {
+  ...(CARTO_KEY
+    ? { voyager: carto('rastertiles/voyager', 'Voyager'), light: carto('light_all', 'Clair'), dark: carto('dark_all', 'Sombre') }
+    : {}),
+  osm: { label: 'OpenStreetMap', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM, maxZoom: 19, dim: true },
+  topo: { label: 'Relief', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attribution: 'Fond &copy; Esri', maxZoom: 19, dim: true },
+  satellite: { label: 'Satellite', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: 'Imagerie &copy; Esri, Maxar, Earthstar Geographics', maxZoom: 19 },
+}
+
+export type TileKey = string
 
 export function resolveTile(key: TileKey, darkTheme: boolean): TileStyle {
-  if (key === 'auto') return darkTheme ? TILE_STYLES.dark : TILE_STYLES.voyager
-  return TILE_STYLES[key]
+  if (key !== 'auto' && TILE_STYLES[key]) return TILE_STYLES[key]
+  if (CARTO_KEY) return darkTheme ? TILE_STYLES.dark : TILE_STYLES.voyager
+  return TILE_STYLES.osm
 }
 
 /** Couleurs des trajets par jour (vue « tous les jours ») */

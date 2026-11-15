@@ -20,7 +20,8 @@ export function WeatherCard({ trip, compact }: { trip: Trip; compact?: boolean }
   const days = (inTrip.length ? inTrip : all).slice(0, compact ? 5 : 7)
   const now = weatherIcon(f.current.code, f.current.isDay)
   const place = trip.destination?.split(',')[0] ?? 'sur place'
-  const localTime = f.current.time ? f.current.time.slice(11, 16).replace(':', 'h') : null
+  const [hh, mm] = f.current.time ? f.current.time.slice(11, 16).split(':') : []
+  const localTime = hh ? `${Number(hh)}h${mm}` : null
 
   if (compact) {
     return (
@@ -46,7 +47,10 @@ export function WeatherCard({ trip, compact }: { trip: Trip; compact?: boolean }
   return (
     <Card className="overflow-hidden">
       <div className="bg-gradient-to-br from-primary/90 to-primary/60 p-4 text-primary-foreground">
-        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide opacity-90"><CloudSun className="h-3.5 w-3.5" /> Maintenant à {place}{localTime ? ` · ${localTime} heure locale` : ''}</p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide opacity-90"><CloudSun className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Météo · {place}</span></p>
+          {localTime && <p className="shrink-0 text-xs opacity-90">Il est {localTime} sur place</p>}
+        </div>
         <div className="mt-2 flex items-center gap-3">
           <span className="text-5xl leading-none">{now.icon}</span>
           <div>

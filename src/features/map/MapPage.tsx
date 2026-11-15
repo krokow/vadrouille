@@ -345,8 +345,8 @@ export default function MapPage() {
       <div className="relative flex min-h-0 flex-1">
         <div className="relative min-w-0 flex-1">
           <MapContainer center={fallback ?? [46.6, 2.4]} zoom={fallback ? 12 : 5} className="h-full w-full" zoomControl={false}>
-            <TileLayer key={tile.url} url={tile.url} attribution={tile.attribution} maxZoom={tile.maxZoom} subdomains={tile.subdomains ?? 'abc'}
-              className={tileKey === 'osm' ? 'dim-tiles' : undefined} detectRetina />
+            <TileLayer key={tile.url} url={tile.url} attribution={tile.attribution} maxZoom={tile.maxZoom} 
+              className={tile.dim ? 'dim-tiles' : undefined} />
             <FitTo points={fitPoints} fallback={fallback} signal={fitSignal} />
             <FlyTo target={fly ?? (candidate ? { lat: candidate.lat, lng: candidate.lng } : focused ? { lat: focused.place.lat, lng: focused.place.lng } : null)} />
             <MapEvents enabled={canEdit} onPick={pickPoint} onMove={setCenter} />

@@ -145,6 +145,12 @@ update documents set title = 'Piraté';
 reset role;
 select pg_temp.check((select count(*) from documents where title = 'Piraté') = 0, 'documents : seul le propriétaire modifie');
 
+-- préparatifs (tâches d'avant départ)
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+insert into checklist_items (trip_id, label, kind, due_date) values ('11111111-1111-1111-1111-111111111111', 'Souscrire l''assurance', 'task', current_date + 10);
+select pg_temp.check((select count(*) from checklist_items where kind = 'task') = 1, 'préparatifs : tâche créée');
+reset role;
+
 -- garder un organisateur
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 do $$ begin

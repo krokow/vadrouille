@@ -38,11 +38,12 @@
 | **Activités** | Titre, description, jour/créneau, durée, lieu (carte), liens, coût estimé, catégorie, participants, notes, pièces jointes, **commentaires avec @mention**. |
 | **Points d'attention** | Drapeau « À réserver » + statut + date limite avec alerte visuelle (orange < 7 j, rouge clignotant si dépassée). Champs : horaires, jour de fermeture, meilleure heure, dress code, matériel, accessibilité, météo sensible. Lien vers la réservation. |
 | **À réserver** | Onglet qui regroupe activités et réservations à faire, triées par urgence, avec « marquer réservé » en un tap. |
-| **Carte** | Leaflet + OpenStreetMap. Marqueurs colorés par type, filtres jour/type, **itinéraire du jour** numéroté (vol d'oiseau ou routier via OSRM), fiche rapide, recherche de lieu → « ajouter une activité ici », appui long / clic droit sur la carte, liens Google Maps / Apple Plans. |
+| **Carte** | Leaflet, fonds CARTO (avec clé) / OpenStreetMap / relief / satellite. Marqueurs colorés par type, filtres jour/type, **itinéraire du jour** numéroté (vol d'oiseau ou routier via OSRM), fiche rapide, recherche de lieu → « ajouter une activité ici », appui long / clic droit sur la carte, liens Google Maps / Apple Plans. |
 | **Réservations** | 8 types, chronologie par jour, statuts, numéro de confirmation, PDF/billets en pièce jointe, **mode billet plein écran** (gros numéro + QR, écran maintenu allumé), création automatique de la dépense liée. |
 | **Budget** | Prévisionnel global et par catégorie avec jauges. Dépenses multi-devises (taux BCE figé à la date, via frankfurter.app, modifiable), répartition **parts égales / par parts / montants**, reçu en photo. **Soldes + simplification des dettes** (nombre minimal de virements), « marquer comme remboursé ». Graphiques par catégorie / par jour / par personne. **Export CSV** (format Excel FR). |
 | **Collaboration** | Temps réel Supabase sur toutes les tables, « modifié par X il y a 2 min », dernier écrit gagne (`updated_at`, `updated_by` posés par trigger), **historique** « qui a fait quoi » (regroupe les modifications successives). |
-| **Extras** | Checklist de bagages partagée (modèles plage / montagne / ville / bébé, assignation, filtre « mes affaires »). **Documents à visibilité restreinte** (passeport privé / assurance partagée, alerte d'expiration avant la fin du voyage). Journal / album photo. Programme **imprimable en PDF**. Export **.ics**. Rappel e-mail avant deadline (Edge Function + cron, optionnel). |
+| **Préparatifs** | Todo-list d'avant départ (échéances positionnées à J-30, J-7, J-1… via des modèles, responsable, alerte d'urgence, remontée sur le tableau de bord) à côté de la liste partagée des affaires à emporter (modèles plage / montagne / ville / bébé, assignation, filtre « mes affaires »). |
+| **Extras** | **Documents à visibilité restreinte** (passeport privé / assurance partagée, alerte d'expiration avant la fin du voyage). Journal / album photo. Programme **imprimable en PDF**. Export **.ics**. Rappel e-mail avant deadline (Edge Function + cron, optionnel). |
 | **PWA** | Installable, consultation hors ligne en lecture seule des derniers voyages chargés (cache TanStack Query persisté + tuiles de carte en cache), bandeau « Hors ligne ». |
 | **UX** | Mobile first (barre d'onglets + bouton « + » : activité / réservation / dépense en deux taps), barre latérale sur desktop, mode clair/sombre, skeletons, toasts, états vides, focus visibles, labels accessibles. Dates « lun. 12 mai », montants en locale FR. i18n prête pour l'anglais. |
 
@@ -84,7 +85,8 @@ Ouvre http://localhost:5173/vadrouille/, saisis n'importe quel e-mail : tu es co
 2. `supabase/migrations/20250101000100_security.sql` (fonctions, triggers, RLS, RPC d'invitation)
 3. `supabase/migrations/20250101000200_storage_realtime.sql` (buckets + politiques Storage, publication Realtime)
 4. `supabase/migrations/20250101000300_documents.sql` (documents à visibilité restreinte)
-5. *(facultatif)* `supabase/seed.sql`, puis, après ta première connexion à l'app :
+5. `supabase/migrations/20250101000400_prep_tasks.sql` (préparatifs : tâches d'avant départ)
+6. *(facultatif)* `supabase/seed.sql`, puis, après ta première connexion à l'app :
    ```sql
    select public.seed_demo_trip((select id from auth.users where email = 'toi@exemple.fr'));
    ```
@@ -160,6 +162,7 @@ Les modèles contiennent le lien **et** le code à 6 chiffres (`{{ .Token }}`) :
 1. **Settings → Secrets and variables → Actions → New repository secret** :
    - `VITE_SUPABASE_URL` = Project URL
    - `VITE_SUPABASE_ANON_KEY` = clé `anon public`
+   - *(optionnel)* `VITE_CARTO_API_KEY` = clé CARTO Basemaps (voir ci-dessous)
 2. **Settings → Pages → Build and deployment → Source : GitHub Actions**.
 3. Chaque push sur `main` lance `.github/workflows/deploy.yml` : lint → tests → build (avec `base = /<nom-du-repo>/`) → copie `index.html` en `404.html` → publication sur `https://<ton-user>.github.io/<repo>/`.
 
@@ -174,6 +177,15 @@ cp .env.example .env.local
 ```
 
 puis renseigne les deux valeurs publiques et relance `npm run dev`.
+
+### Fonds de carte CARTO (optionnel, recommandé)
+
+Depuis septembre 2026, CARTO exige une clé gratuite pour ses fonds de carte (sans clé, les tuiles affichent « API KEY REQUIRED »). Sans clé, l'app bascule automatiquement sur OpenStreetMap / Esri.
+
+1. Demande une clé sur https://carto.com/basemaps/apikey (gratuite jusqu'à 5 millions de tuiles par mois en usage non commercial, sans compte CARTO).
+2. Ajoute-la en secret GitHub `VITE_CARTO_API_KEY`, puis relance le workflow de déploiement.
+
+C'est une clé **publique** prévue pour le navigateur (elle apparaît dans les URL des tuiles), comme l'`anon key` Supabase.
 
 ### 5. Rappels e-mail avant deadline (optionnel)
 

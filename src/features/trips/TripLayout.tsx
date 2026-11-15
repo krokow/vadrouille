@@ -35,7 +35,7 @@ const TABS = [
 const MORE = [
   { to: 'todo', label: 'À réserver', icon: BellRing },
   { to: 'members', label: 'Participants', icon: Users },
-  { to: 'checklist', label: 'Bagages', icon: ListChecks },
+  { to: 'checklist', label: 'Préparatifs', icon: ListChecks },
   { to: 'journal', label: 'Journal', icon: BookOpen },
   { to: 'documents', label: 'Documents', icon: FileLock2 },
   { to: 'history', label: 'Historique', icon: History },

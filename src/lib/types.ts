@@ -198,6 +198,8 @@ export interface ChecklistItem extends Base {
   assigned_to: string | null
   done: boolean
   sort_order: number
+  kind?: 'pack' | 'task'
+  due_date?: string | null
 }
 
 export interface JournalEntry extends Base {

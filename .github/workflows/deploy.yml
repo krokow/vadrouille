@@ -31,6 +31,8 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # optionnel : fonds de carte CARTO (clé publique gratuite, carto.com/basemaps/apikey)
+          VITE_CARTO_API_KEY: ${{ secrets.VITE_CARTO_API_KEY }}
           # base = /<nom-du-repo>/
           VITE_BASE: /${{ github.event.repository.name }}/
       - name: Fallback 404 (rechargement de n'importe quelle page)

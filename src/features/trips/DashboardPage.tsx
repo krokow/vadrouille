@@ -25,10 +25,18 @@ export default function DashboardPage() {
   const shares = useTripTable(trip.id, 'expense_shares')
   const settlements = useTripTable(trip.id, 'settlements')
   const budgets = useTripTable(trip.id, 'budgets')
+  const checklist = useTripTable(trip.id, 'checklist_items')
   const base = `/t/${trip.id}`
   const phase = tripPhase(trip.start_date, trip.end_date)
 
   const todo = useMemo(() => buildTodo(activities.data ?? [], bookings.data ?? []), [activities.data, bookings.data])
+  // carte « À faire » : réservations + tâches d'avant départ (tant que le voyage n'est pas terminé)
+  const todoAll = useMemo(
+    () => buildTodo(activities.data ?? [], bookings.data ?? [], new Date(), phase === 'past' ? [] : checklist.data ?? []),
+    [activities.data, bookings.data, checklist.data, phase],
+  )
+  const tasks = (checklist.data ?? []).filter((c) => c.kind === 'task')
+  const packing = (checklist.data ?? []).filter((c) => c.kind !== 'task')
 
   const upcoming = useMemo(() => {
     const from = phase === 'upcoming' && trip.start_date ? trip.start_date : isoDay()
@@ -88,10 +96,19 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><BellRing className="h-4 w-4 text-coral" /> À faire / à réserver</CardTitle>
-              {todo.length > 0 && <Button asChild variant="ghost" size="sm"><Link to={`${base}/todo`}>Tout voir ({todo.length}) <ArrowRight /></Link></Button>}
+              <div className="flex gap-1">
+                <Button asChild variant="ghost" size="sm"><Link to={`${base}/checklist`}>Préparatifs</Link></Button>
+                {todo.length > 0 && <Button asChild variant="ghost" size="sm"><Link to={`${base}/todo`}>À réserver ({todo.length}) <ArrowRight /></Link></Button>}
+              </div>
             </CardHeader>
-            <CardContent>
-              {todo.length ? <TodoList items={todo.slice(0, 5)} compact /> : <p className="text-sm text-muted-foreground">Rien d’urgent, tout est sous contrôle 🙌</p>}
+            <CardContent className="space-y-3">
+              {todoAll.length ? <TodoList items={todoAll.slice(0, 6)} compact /> : <p className="text-sm text-muted-foreground">Rien d’urgent, tout est sous contrôle 🙌</p>}
+              {(tasks.length > 0 || packing.length > 0) && (
+                <Link to={`${base}/checklist`} className="grid grid-cols-2 gap-3 rounded-2xl bg-muted/60 p-3 text-xs hover:bg-muted">
+                  <span><span className="font-semibold">Avant le départ</span> · {tasks.filter((t) => t.done).length}/{tasks.length}<Gauge className="mt-1 h-1.5" value={tasks.filter((t) => t.done).length} max={Math.max(1, tasks.length)} label="Tâches faites" /></span>
+                  <span><span className="font-semibold">À emporter</span> · {packing.filter((t) => t.done).length}/{packing.length}<Gauge className="mt-1 h-1.5" value={packing.filter((t) => t.done).length} max={Math.max(1, packing.length)} label="Affaires prêtes" /></span>
+                </Link>
+              )}
             </CardContent>
           </Card>
 

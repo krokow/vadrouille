@@ -47,6 +47,6 @@ export async function duplicateTrip(source: Trip, opts: { name: string; startDat
     await backend.insert('activity_links', validLinks.map((l) => ({ ...strip(l), id: uid(), trip_id: id, activity_id: actMap.get(l.activity_id)! })))
   if (budgets.length) await backend.insert('budgets', budgets.map((b) => ({ ...strip(b), id: uid(), trip_id: id })))
   if (checklist.length)
-    await backend.insert('checklist_items', checklist.map((c) => ({ ...strip(c), id: uid(), trip_id: id, done: false, assigned_to: null })))
+    await backend.insert('checklist_items', checklist.map((c) => ({ ...strip(c), id: uid(), trip_id: id, done: false, assigned_to: null, due_date: c.due_date && offset ? shiftDay(c.due_date, offset) : opts.startDate ? c.due_date ?? null : null })))
   return id
 }
