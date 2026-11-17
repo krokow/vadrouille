@@ -101,3 +101,37 @@
   .thin-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 999px; }
   .thin-scrollbar::-webkit-scrollbar-track { background: transparent; }
 }
+
+/*
+ * Champs date / heure sur iOS (Safari, PWA) : sans ceci, ils gardent leur style natif,
+ * ignorent la hauteur des autres champs, centrent le texte et s'aplatissent quand ils sont vides.
+ */
+@layer base {
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'],
+  input[type='month'] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    line-height: 1.25;
+  }
+  input[type='date']::-webkit-date-and-time-value,
+  input[type='time']::-webkit-date-and-time-value,
+  input[type='datetime-local']::-webkit-date-and-time-value,
+  input[type='month']::-webkit-date-and-time-value {
+    text-align: left;
+    min-height: 1.25em;
+    margin: 0;
+  }
+  input[type='date']::-webkit-datetime-edit,
+  input[type='time']::-webkit-datetime-edit,
+  input[type='datetime-local']::-webkit-datetime-edit {
+    padding: 0;
+  }
+  /* même hauteur que les autres champs, même vide */
+  input[type='file'] { line-height: 1.25; }
+}
